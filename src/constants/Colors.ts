@@ -1,0 +1,53 @@
+const tintColorLight = '#2f95dc';
+const tintColorDark = '#fff';
+
+export default {
+  light: {
+    text: '#000',
+    background: '#fff',
+    tint: tintColorLight,
+    tabIconDefault: '#ccc',
+    tabIconSelected: tintColorLight,
+    primary: '#FF6B35',
+    secondary: '#F7931E',
+    success: '#4CAF50',
+    error: '#F44336',
+    warning: '#FF9800',
+    gray: {
+      50: '#f9fafb',
+      100: '#f3f4f6',
+      200: '#e5e7eb',
+      300: '#d1d5db',
+      400: '#9ca3af',
+      500: '#6b7280',
+      600: '#4b5563',
+      700: '#374151',
+      800: '#1f2937',
+      900: '#111827',
+    },
+  },
+  dark: {
+    text: '#fff',
+    background: '#000',
+    tint: tintColorDark,
+    tabIconDefault: '#ccc',
+    tabIconSelected: tintColorDark,
+    primary: '#FF6B35',
+    secondary: '#F7931E',
+    success: '#4CAF50',
+    error: '#F44336',
+    warning: '#FF9800',
+    gray: {
+      50: '#111827',
+      100: '#1f2937',
+      200: '#374151',
+      300: '#4b5563',
+      400: '#6b7280',
+      500: '#9ca3af',
+      600: '#d1d5db',
+      700: '#e5e7eb',
+      800: '#f3f4f6',
+      900: '#f9fafb',
+    },
+  },
+};
