@@ -43,34 +43,64 @@ export interface AuthResponse {
  */
 export async function signUp(signUpData: SignUpData): Promise<AuthResponse> {
   try {
+    console.log('🔧 Starting signup process with data:', {
+      email: signUpData.email,
+      username: signUpData.username,
+      display_name: signUpData.display_name
+    });
     const { email, password, username, display_name } = signUpData;
 
     // Check if username is available
+    console.log('🔧 Checking username availability:', username);
     const { data: isAvailable, error: usernameError } = await isUsernameAvailable(username);
     
     if (usernameError) {
+      console.error('❌ Username check error:', usernameError);
       return { user: null, session: null, error: usernameError };
     }
 
     if (!isAvailable) {
+      console.error('❌ Username taken:', username);
       return { user: null, session: null, error: 'Username is already taken' };
     }
 
-    // Sign up with Supabase Auth
+    console.log('✅ Username available, proceeding with signup');
+
+    // Sign up with Supabase Auth - test with minimal data
+    console.log('🔧 Calling supabase.auth.signUp...');
+    console.log('🔧 Using email:', email);
+    console.log('🔧 Password length:', password.length);
+    
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
     });
+    
+    console.log('🔧 Raw signup response:', { data: authData, error: authError });
 
     if (authError) {
+      console.error('❌ Supabase auth signup error:', {
+        message: authError.message,
+        status: authError.status,
+        statusCode: authError.status,
+        name: authError.name,
+        details: authError
+      });
       return { user: null, session: null, error: authError.message };
     }
 
+    console.log('🔧 Auth signup result:', { 
+      user: authData.user ? 'Found' : 'Missing',
+      session: authData.session ? 'Found' : 'Missing'
+    });
+
     if (!authData.user) {
+      console.error('❌ No user returned from auth signup');
       return { user: null, session: null, error: 'Failed to create user account' };
     }
 
-    // Create user profile in users table
+    // Create user profile manually (bypass trigger issues)
+    console.log('🔧 Creating user profile in database...');
     const userProfile: UserInsert = {
       id: authData.user.id,
       email: authData.user.email!,
@@ -80,29 +110,80 @@ export async function signUp(signUpData: SignUpData): Promise<AuthResponse> {
       bio: null,
       push_token: null,
     };
+    
+    console.log('🔧 Creating profile with data:', userProfile);
 
-    const { error: profileError } = await supabase
+    const { data: createdProfile, error: profileError } = await supabase
       .from('users')
-      .insert(userProfile);
+      .insert(userProfile)
+      .select('*')
+      .single();
 
     if (profileError) {
-      // If profile creation fails, we should clean up the auth user
-      // But for now, we'll just return the error
-      return { user: null, session: null, error: profileError.message };
+      console.error('❌ Profile creation error:', profileError);
+      
+      // Handle RLS policy error
+      if (profileError.code === '42501') {
+        return { 
+          user: null, 
+          session: null, 
+          error: 'Database permissions issue. Please contact support to set up your profile.' 
+        };
+      }
+      
+      // If it's a duplicate key error (user already exists), try to get existing profile
+      if (profileError.message.includes('duplicate key') || profileError.code === '23505') {
+        console.log('🔧 Profile already exists, fetching existing profile...');
+        const { data: existingProfile } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', authData.user.id)
+          .single();
+        
+        if (existingProfile) {
+          console.log('✅ Found existing user profile');
+          var finalProfile = existingProfile;
+        } else {
+          return { user: null, session: null, error: 'Account created but profile setup failed. Please contact support.' };
+        }
+      } else {
+        return { user: null, session: null, error: profileError.message };
+      }
+    } else {
+      console.log('✅ User profile created successfully');
+      console.log('🔧 Created profile data:', createdProfile);
+      var finalProfile = createdProfile;
+    }
+
+    // Verify the profile was saved correctly
+    console.log('🔧 Verifying profile in database...');
+    const { data: verifiedProfile, error: verifyError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', authData.user.id)
+      .single();
+
+    if (verifyError) {
+      console.error('❌ Error verifying profile:', verifyError);
+    } else {
+      console.log('🔧 Verified profile in database:', verifiedProfile);
+      finalProfile = verifiedProfile; // Use the verified profile
     }
 
     const authUser: AuthUser = {
       id: authData.user.id,
       email: authData.user.email!,
-      profile: { ...userProfile, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+      profile: finalProfile,
     };
 
+    console.log('✅ Signup completed successfully');
     return { 
       user: authUser, 
       session: authData.session, 
       error: null 
     };
   } catch (error) {
+    console.error('❌ Signup process failed:', error);
     return { user: null, session: null, error: (error as Error).message };
   }
 }
@@ -362,7 +443,7 @@ export async function updatePushToken(userId: UUID, pushToken: string): Promise<
  * Listen to auth state changes
  */
 export function onAuthStateChange(callback: (user: AuthUser | null) => void) {
-  return supabase.auth.onAuthStateChange(async (event, session) => {
+  return supabase.auth.onAuthStateChange(async (_event, session) => {
     if (session?.user) {
       // Get user profile
       const { data: profile } = await supabase

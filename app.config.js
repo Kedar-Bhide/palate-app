@@ -8,23 +8,21 @@ export default {
     userInterfaceStyle: "light",
     scheme: "palate",
     splash: {
-      image: "./assets/splash.png",
+      image: "./assets/splash-icon.png",
       resizeMode: "contain",
       backgroundColor: "#ffffff"
     },
-    assetBundlePatterns: [
-      "**/*"
-    ],
+    assetBundlePatterns: ["**/*"],
     ios: {
       supportsTablet: true,
-      bundleIdentifier: "com.yourname.palate"
+      bundleIdentifier: "com.kedarb.palate"
     },
     android: {
       adaptiveIcon: {
         foregroundImage: "./assets/adaptive-icon.png",
         backgroundColor: "#FFFFFF"
       },
-      package: "com.yourname.palate"
+      package: "com.kedarb.palate"
     },
     web: {
       favicon: "./assets/favicon.png"
@@ -34,6 +32,10 @@ export default {
       "expo-image-picker",
       "expo-location",
       "expo-secure-store"
-    ]
+    ],
+    extra: {
+      supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
+      supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY
+    }
   }
 };
