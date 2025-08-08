@@ -1,18 +1,27 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Dimensions } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 
 import { ProfileScreenProps } from '../navigation/types';
 import { theme } from '../theme';
+import uiTheme, { bottomNavHeight, spacing } from '../theme/uiTheme';
 import Card from '../components/ui/Card';
+import ModernCard from '../components/ui/ModernCard';
 import Avatar from '../components/ui/Avatar';
 import Button from '../components/ui/Button';
 import { useAuth } from '../hooks/useAuth';
 
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
 const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const { user, signOut } = useAuth();
+  
+  // Responsive calculations
+  const isSmallScreen = SCREEN_WIDTH < 375;
+  const cardMargin = SCREEN_WIDTH * 0.04;
+  const headerPadding = SCREEN_WIDTH * 0.05;
 
   const handleSignOut = () => {
     Alert.alert(
@@ -256,70 +265,85 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: theme.spacing.lg,
-    paddingBottom: theme.spacing.md,
-    backgroundColor: theme.colors.background,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.outline,
+    paddingHorizontal: Math.max(theme.spacing.lg, SCREEN_WIDTH * 0.05),
+    paddingBottom: theme.spacing.lg,
+    backgroundColor: theme.colors.white,
+    borderBottomWidth: 0,
+    ...theme.shadows.xs,
   },
   headerTitle: {
-    fontSize: theme.typography.fontSize.xl,
+    fontSize: SCREEN_WIDTH > 375 ? theme.typography.fontSize['2xl'] : theme.typography.fontSize.xl,
     fontWeight: theme.typography.fontWeight.bold,
     color: theme.colors.text,
+    letterSpacing: theme.typography.letterSpacing.tight,
   },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   headerIcon: {
-    marginLeft: theme.spacing.md,
+    padding: theme.spacing.xs,
+    borderRadius: theme.borderRadius.full,
+    backgroundColor: theme.colors.gray[50],
+    width: Math.max(36, theme.touchTarget.minHeight * 0.8),
+    height: Math.max(36, theme.touchTarget.minHeight * 0.8),
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   content: {
     flex: 1,
   },
   scrollContent: {
-    padding: theme.spacing.lg,
+    paddingHorizontal: spacing(2),
+    paddingTop: spacing(2),
+    paddingBottom: bottomNavHeight + spacing(3), // Proper bottom nav clearance
   },
   profileCard: {
     marginBottom: theme.spacing.lg,
+    borderRadius: theme.borderRadius.lg,
   },
   profileHeader: {
     alignItems: 'center',
-    marginBottom: theme.spacing.lg,
+    marginBottom: theme.spacing.xl,
   },
   profileInfo: {
     alignItems: 'center',
-    marginTop: theme.spacing.lg,
+    marginTop: theme.spacing.xl,
   },
   profileName: {
-    fontSize: theme.typography.fontSize['2xl'],
+    fontSize: SCREEN_WIDTH > 375 ? theme.typography.fontSize['3xl'] : theme.typography.fontSize['2xl'],
     fontWeight: theme.typography.fontWeight.bold,
     color: theme.colors.text,
-    marginBottom: theme.spacing.xs,
+    marginBottom: theme.spacing.sm,
+    letterSpacing: theme.typography.letterSpacing.tight,
   },
   profileEmail: {
     fontSize: theme.typography.fontSize.base,
     color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.sm,
+    marginBottom: theme.spacing.lg,
   },
   profileBio: {
     fontSize: theme.typography.fontSize.base,
     color: theme.colors.textSecondary,
     textAlign: 'center',
     fontStyle: 'italic',
+    lineHeight: theme.typography.fontSize.base * theme.typography.lineHeight.relaxed,
   },
   statsRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
     marginBottom: theme.spacing.lg,
+    backgroundColor: theme.colors.gray[50],
+    borderRadius: theme.borderRadius.lg,
+    paddingVertical: theme.spacing.md,
   },
   statItem: {
     alignItems: 'center',
     flex: 1,
   },
   statNumber: {
-    fontSize: theme.typography.fontSize['2xl'],
+    fontSize: SCREEN_WIDTH > 375 ? theme.typography.fontSize['3xl'] : theme.typography.fontSize['2xl'],
     fontWeight: theme.typography.fontWeight.bold,
     color: theme.colors.primary,
     marginBottom: theme.spacing.xs,
@@ -327,114 +351,130 @@ const styles = StyleSheet.create({
   statLabel: {
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
-    fontWeight: theme.typography.fontWeight.medium,
+    fontWeight: theme.typography.fontWeight.semibold,
   },
   statDivider: {
     width: 1,
-    height: 40,
+    height: SCREEN_WIDTH > 375 ? 50 : 40,
     backgroundColor: theme.colors.outline,
-    marginHorizontal: theme.spacing.md,
+    marginHorizontal: theme.spacing.lg,
   },
   editButton: {
     alignSelf: 'center',
-    minWidth: 150,
+    minWidth: SCREEN_WIDTH * 0.4,
   },
   actionsCard: {
     marginBottom: theme.spacing.lg,
+    borderRadius: theme.borderRadius.lg,
   },
   sectionTitle: {
-    fontSize: theme.typography.fontSize.lg,
-    fontWeight: theme.typography.fontWeight.semibold,
+    fontSize: SCREEN_WIDTH > 375 ? theme.typography.fontSize.xl : theme.typography.fontSize.lg,
+    fontWeight: theme.typography.fontWeight.bold,
     color: theme.colors.text,
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.lg,
+    letterSpacing: theme.typography.letterSpacing.wide,
   },
   actionGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
+    gap: theme.spacing.md,
   },
   actionItem: {
-    width: '48%',
+    width: (SCREEN_WIDTH - (SCREEN_WIDTH * 0.03 * 6)) / 2,
     alignItems: 'center',
     paddingVertical: theme.spacing.lg,
-    marginBottom: theme.spacing.md,
+    borderRadius: theme.borderRadius.md,
+    backgroundColor: theme.colors.gray[50],
   },
   actionIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: theme.colors.surfaceVariant,
+    width: SCREEN_WIDTH > 375 ? 60 : 50,
+    height: SCREEN_WIDTH > 375 ? 60 : 50,
+    borderRadius: SCREEN_WIDTH > 375 ? 30 : 25,
+    backgroundColor: theme.colors.white,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: theme.spacing.sm,
+    marginBottom: theme.spacing.lg,
+    ...theme.shadows.sm,
   },
   actionText: {
     fontSize: theme.typography.fontSize.sm,
-    fontWeight: theme.typography.fontWeight.medium,
+    fontWeight: theme.typography.fontWeight.semibold,
     color: theme.colors.text,
     textAlign: 'center',
   },
   menuCard: {
     marginBottom: theme.spacing.lg,
+    borderRadius: theme.borderRadius.lg,
+    overflow: 'hidden',
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
-    borderBottomWidth: 1,
+    paddingHorizontal: theme.spacing.xl,
+    paddingVertical: theme.spacing.lg,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: theme.colors.outline,
+    backgroundColor: theme.colors.white,
   },
   menuIcon: {
-    marginRight: theme.spacing.md,
+    marginRight: theme.spacing.lg,
+    width: 32,
+    textAlign: 'center',
   },
   menuContent: {
     flex: 1,
   },
   menuTitle: {
     fontSize: theme.typography.fontSize.base,
-    fontWeight: theme.typography.fontWeight.medium,
+    fontWeight: theme.typography.fontWeight.semibold,
     color: theme.colors.text,
     marginBottom: theme.spacing.xs,
   },
   menuSubtitle: {
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
+    lineHeight: theme.typography.fontSize.sm * theme.typography.lineHeight.normal,
   },
   infoCard: {
-    marginBottom: theme.spacing.lg,
-    backgroundColor: theme.colors.surfaceVariant,
+    marginBottom: theme.spacing.xl,
+    backgroundColor: theme.colors.gray[50],
+    borderRadius: theme.borderRadius.xxl,
   },
   infoContent: {
     alignItems: 'center',
   },
   appName: {
-    fontSize: theme.typography.fontSize.xl,
+    fontSize: SCREEN_WIDTH > 375 ? theme.typography.fontSize['2xl'] : theme.typography.fontSize.xl,
     fontWeight: theme.typography.fontWeight.bold,
     color: theme.colors.primary,
-    marginBottom: theme.spacing.xs,
+    marginBottom: theme.spacing.sm,
+    letterSpacing: theme.typography.letterSpacing.tight,
   },
   appVersion: {
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.lg,
   },
   appDescription: {
     fontSize: theme.typography.fontSize.base,
     color: theme.colors.textSecondary,
     textAlign: 'center',
     lineHeight: theme.typography.fontSize.base * theme.typography.lineHeight.relaxed,
+    maxWidth: SCREEN_WIDTH * 0.8,
   },
   signOutContainer: {
     alignItems: 'center',
-    marginBottom: theme.spacing.xl,
+    marginBottom: theme.spacing['3xl'],
   },
   signOutButton: {
     borderColor: theme.colors.error,
-    minWidth: 200,
+    minWidth: SCREEN_WIDTH * 0.6,
+    borderWidth: 1.5,
   },
   signOutText: {
     color: theme.colors.error,
+    fontWeight: theme.typography.fontWeight.semibold,
   },
 });
 

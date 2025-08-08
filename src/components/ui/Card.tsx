@@ -7,6 +7,7 @@ import {
   TouchableOpacityProps,
 } from 'react-native';
 import { theme } from '../../theme';
+import uiTheme, { colors, spacing, radii, shadows } from '../../theme/uiTheme';
 
 export type CardVariant = 'elevated' | 'flat' | 'outlined';
 export type CardPadding = 'none' | 'small' | 'medium' | 'large';
@@ -152,20 +153,25 @@ export const CardWithSections: React.FC<CardSectionProps> = ({
 
 const styles = StyleSheet.create({
   base: {
-    borderRadius: theme.borderRadius.lg,
-    backgroundColor: theme.colors.surface,
+    borderRadius: radii.card,
+    backgroundColor: colors.surface,
+    overflow: 'hidden',
   },
   variants: {
     elevated: {
-      ...theme.shadows.md,
+      ...shadows.small,
+      backgroundColor: colors.white,
+      borderWidth: 0,
     },
     flat: {
-      backgroundColor: theme.colors.surface,
+      backgroundColor: colors.surface,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.outline,
     },
     outlined: {
-      backgroundColor: theme.colors.surface,
-      borderWidth: 1,
-      borderColor: theme.colors.outline,
+      backgroundColor: colors.white,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.outline,
     },
   },
   padding: {
@@ -173,13 +179,13 @@ const styles = StyleSheet.create({
       padding: 0,
     },
     small: {
-      padding: theme.spacing.sm,
+      padding: spacing(1),
     },
     medium: {
-      padding: theme.spacing.md,
+      padding: spacing(1.5),
     },
     large: {
-      padding: theme.spacing.lg,
+      padding: spacing(2),
     },
   },
   headerSection: {
@@ -196,6 +202,9 @@ const styles = StyleSheet.create({
   },
   footerSection: {
     marginTop: theme.spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: theme.colors.outline,
+    paddingTop: theme.spacing.md,
   },
 });
 

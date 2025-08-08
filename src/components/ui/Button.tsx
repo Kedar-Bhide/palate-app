@@ -10,6 +10,7 @@ import {
   TouchableOpacityProps,
 } from 'react-native';
 import { theme } from '../../theme';
+import uiTheme, { colors, spacing, radii, fonts, shadows, layout } from '../../theme/uiTheme';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'text';
 export type ButtonSize = 'small' | 'medium' | 'large';
@@ -134,34 +135,41 @@ export const Button: React.FC<ButtonProps> = ({
 
 const styles = StyleSheet.create({
   base: {
-    borderRadius: theme.borderRadius.md,
+    borderRadius: radii.button,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
+    ...shadows.small,
+    minHeight: layout.touchTarget,
   },
   fullWidth: {
     width: '100%',
   },
   sizes: {
     small: {
-      height: 32,
+      height: Math.max(32, theme.touchTarget.minHeight * 0.7),
       paddingHorizontal: theme.spacing.md,
+      minWidth: theme.touchTarget.minWidth * 1.5,
     },
     medium: {
-      height: theme.touchTarget.minHeight,
-      paddingHorizontal: theme.spacing.lg,
+      height: layout.touchTarget,
+      paddingHorizontal: spacing(2),
+      minWidth: layout.touchTarget * 2,
     },
     large: {
-      height: 56,
+      height: Math.max(48, theme.touchTarget.minHeight),
       paddingHorizontal: theme.spacing.xl,
+      minWidth: theme.touchTarget.minWidth * 2.5,
     },
   },
   variants: {
     primary: {
-      backgroundColor: theme.colors.primary,
+      backgroundColor: colors.primary,
+      ...shadows.small,
     },
     secondary: {
       backgroundColor: theme.colors.secondary,
+      ...theme.shadows.xs,
     },
     outline: {
       backgroundColor: 'transparent',
@@ -169,31 +177,34 @@ const styles = StyleSheet.create({
       borderColor: theme.colors.primary,
     },
     ghost: {
-      backgroundColor: 'transparent',
+      backgroundColor: theme.colors.gray[50],
     },
     text: {
       backgroundColor: 'transparent',
+      ...theme.shadows.none,
     },
   },
   disabled: {
-    opacity: 0.6,
+    opacity: 0.5,
+    ...theme.shadows.none,
   },
   text: {
     textAlign: 'center',
-    fontWeight: theme.typography.fontWeight.medium,
+    fontWeight: theme.typography.fontWeight.semibold,
+    letterSpacing: theme.typography.letterSpacing.wide,
   },
   textSizes: {
     small: {
       fontSize: theme.typography.fontSize.sm,
-      lineHeight: theme.typography.fontSize.sm * theme.typography.lineHeight.normal,
+      lineHeight: theme.typography.fontSize.sm * theme.typography.lineHeight.tight,
     },
     medium: {
       fontSize: theme.typography.fontSize.base,
-      lineHeight: theme.typography.fontSize.base * theme.typography.lineHeight.normal,
+      lineHeight: theme.typography.fontSize.base * theme.typography.lineHeight.tight,
     },
     large: {
       fontSize: theme.typography.fontSize.lg,
-      lineHeight: theme.typography.fontSize.lg * theme.typography.lineHeight.normal,
+      lineHeight: theme.typography.fontSize.lg * theme.typography.lineHeight.tight,
     },
   },
   textVariants: {
@@ -205,12 +216,15 @@ const styles = StyleSheet.create({
     },
     outline: {
       color: theme.colors.primary,
+      fontWeight: theme.typography.fontWeight.medium,
     },
     ghost: {
-      color: theme.colors.primary,
+      color: theme.colors.text,
+      fontWeight: theme.typography.fontWeight.medium,
     },
     text: {
       color: theme.colors.primary,
+      fontWeight: theme.typography.fontWeight.medium,
     },
   },
   textDisabled: {

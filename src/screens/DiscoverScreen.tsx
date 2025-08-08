@@ -1,14 +1,18 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 
 import { DiscoverScreenProps } from '../navigation/types';
 import { theme } from '../theme';
+import uiTheme, { bottomNavHeight, spacing } from '../theme/uiTheme';
 import Card from '../components/ui/Card';
+import ModernCard from '../components/ui/ModernCard';
 import Input from '../components/ui/Input';
 import Avatar from '../components/ui/Avatar';
 import Button from '../components/ui/Button';
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const DiscoverScreen: React.FC<DiscoverScreenProps> = ({ navigation }) => {
   const insets = useSafeAreaInsets();
@@ -199,11 +203,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: theme.spacing.lg,
-    paddingBottom: theme.spacing.md,
-    backgroundColor: theme.colors.background,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.outline,
+    paddingHorizontal: Math.max(theme.spacing.lg, SCREEN_WIDTH * 0.05),
+    paddingBottom: theme.spacing.lg,
+    backgroundColor: theme.colors.white,
+    borderBottomWidth: 0,
+    ...theme.shadows.xs,
   },
   headerTitle: {
     fontSize: theme.typography.fontSize.xl,
@@ -221,7 +225,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: theme.spacing.lg,
+    paddingHorizontal: spacing(2),
+    paddingTop: spacing(2),
+    paddingBottom: bottomNavHeight + spacing(3),
   },
   searchSection: {
     marginBottom: theme.spacing.lg,

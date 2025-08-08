@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { theme } from '../../theme';
+import uiTheme, { colors, spacing, radii, fonts, layout } from '../../theme/uiTheme';
 
 export type InputVariant = 'default' | 'outlined' | 'filled';
 export type InputSize = 'small' | 'medium' | 'large';
@@ -203,9 +204,10 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: theme.typography.fontSize.sm,
-    fontWeight: theme.typography.fontWeight.medium,
+    fontWeight: theme.typography.fontWeight.semibold,
     color: theme.colors.text,
-    marginBottom: theme.spacing.xs,
+    marginBottom: theme.spacing.sm,
+    letterSpacing: theme.typography.letterSpacing.wide,
   },
   labelError: {
     color: theme.colors.error,
@@ -216,71 +218,80 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: theme.borderRadius.md,
+    borderRadius: radii.input,
+    overflow: 'hidden',
   },
   sizes: {
     small: {
-      minHeight: 32,
+      minHeight: Math.max(36, theme.touchTarget.minHeight * 0.8),
     },
     medium: {
-      minHeight: theme.touchTarget.minHeight,
+      minHeight: layout.touchTarget,
     },
     large: {
-      minHeight: 56,
+      minHeight: Math.max(48, theme.touchTarget.minHeight),
     },
   },
   variants: {
     default: {
-      borderBottomWidth: 1,
-      borderBottomColor: theme.colors.outline,
-      backgroundColor: 'transparent',
+      backgroundColor: theme.colors.surfaceVariant,
+      borderWidth: 1,
+      borderColor: 'transparent',
     },
     outlined: {
-      borderWidth: 1,
+      borderWidth: 1.5,
       borderColor: theme.colors.outline,
-      backgroundColor: theme.colors.background,
+      backgroundColor: theme.colors.white,
+      ...theme.shadows.xs,
     },
     filled: {
-      backgroundColor: theme.colors.surfaceVariant,
+      backgroundColor: theme.colors.gray[50],
       borderWidth: 0,
     },
   },
   containerFocused: {
     borderColor: theme.colors.primary,
     borderBottomColor: theme.colors.primary,
+    backgroundColor: theme.colors.white,
+    ...theme.shadows.sm,
   },
   containerError: {
     borderColor: theme.colors.error,
     borderBottomColor: theme.colors.error,
+    backgroundColor: theme.colors.white,
   },
   containerDisabled: {
-    backgroundColor: theme.colors.surfaceVariant,
-    opacity: 0.6,
+    backgroundColor: theme.colors.gray[100],
+    opacity: 0.7,
   },
   input: {
     flex: 1,
     fontSize: theme.typography.fontSize.base,
     color: theme.colors.text,
-    paddingHorizontal: theme.spacing.md,
+    paddingHorizontal: theme.spacing.lg,
+    fontWeight: theme.typography.fontWeight.normal,
   },
   inputSizes: {
     small: {
       fontSize: theme.typography.fontSize.sm,
+      paddingHorizontal: theme.spacing.md,
     },
     medium: {
       fontSize: theme.typography.fontSize.base,
+      paddingHorizontal: theme.spacing.lg,
     },
     large: {
       fontSize: theme.typography.fontSize.lg,
+      paddingHorizontal: theme.spacing.lg,
     },
   },
   leftIconContainer: {
-    paddingLeft: theme.spacing.md,
+    paddingLeft: theme.spacing.lg,
     alignItems: 'center',
     justifyContent: 'center',
   },
   rightIconContainer: {
-    paddingRight: theme.spacing.md,
+    paddingRight: theme.spacing.lg,
     alignItems: 'center',
     justifyContent: 'center',
     minWidth: theme.touchTarget.minWidth,
@@ -290,8 +301,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginTop: theme.spacing.xs,
-    minHeight: 20,
+    marginTop: theme.spacing.sm,
+    minHeight: 18,
   },
   messageContainer: {
     flex: 1,
@@ -300,6 +311,7 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.fontSize.xs,
     color: theme.colors.error,
     lineHeight: theme.typography.fontSize.xs * theme.typography.lineHeight.normal,
+    fontWeight: theme.typography.fontWeight.medium,
   },
   helperText: {
     fontSize: theme.typography.fontSize.xs,
@@ -310,6 +322,7 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.fontSize.xs,
     color: theme.colors.textSecondary,
     marginLeft: theme.spacing.sm,
+    fontWeight: theme.typography.fontWeight.medium,
   },
   characterCountError: {
     color: theme.colors.error,

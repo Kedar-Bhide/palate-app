@@ -1,12 +1,16 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 
 import { CameraScreenProps } from '../navigation/types';
 import { theme } from '../theme';
+import uiTheme, { bottomNavHeight, spacing } from '../theme/uiTheme';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
+import ModernCard from '../components/ui/ModernCard';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const CameraScreen: React.FC<CameraScreenProps> = ({ navigation }) => {
   const handleGoBack = () => {
@@ -144,14 +148,21 @@ const styles = StyleSheet.create({
   },
   backButton: {
     padding: theme.spacing.sm,
+    borderRadius: theme.borderRadius.full,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    width: theme.touchTarget.minHeight * 0.9,
+    height: theme.touchTarget.minHeight * 0.9,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginLeft: -theme.spacing.sm,
   },
   headerTitle: {
     flex: 1,
-    fontSize: theme.typography.fontSize.lg,
-    fontWeight: theme.typography.fontWeight.semibold,
+    fontSize: SCREEN_WIDTH > 375 ? theme.typography.fontSize.xl : theme.typography.fontSize.lg,
+    fontWeight: theme.typography.fontWeight.bold,
     color: theme.colors.white,
     textAlign: 'center',
+    letterSpacing: theme.typography.letterSpacing.wide,
   },
   headerSpacer: {
     width: 40,
@@ -217,22 +228,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   captureButton: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: SCREEN_WIDTH > 375 ? 90 : 80,
+    height: SCREEN_WIDTH > 375 ? 90 : 80,
+    borderRadius: SCREEN_WIDTH > 375 ? 45 : 40,
     backgroundColor: theme.colors.white,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 4,
-    borderColor: theme.colors.gray[300],
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    ...theme.shadows.lg,
   },
   captureButtonInner: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: theme.colors.white,
+    width: SCREEN_WIDTH > 375 ? 70 : 60,
+    height: SCREEN_WIDTH > 375 ? 70 : 60,
+    borderRadius: SCREEN_WIDTH > 375 ? 35 : 30,
+    backgroundColor: theme.colors.primary,
     borderWidth: 2,
-    borderColor: theme.colors.gray[400],
+    borderColor: theme.colors.white,
   },
   settingsButton: {
     width: 44,
@@ -247,8 +259,9 @@ const styles = StyleSheet.create({
     paddingTop: theme.spacing.lg,
   },
   actionsCard: {
-    marginHorizontal: theme.spacing.lg,
-    marginBottom: theme.spacing.lg,
+    marginHorizontal: spacing(2),
+    marginBottom: bottomNavHeight + spacing(2),
+    borderRadius: uiTheme.radii.card,
   },
   actionsTitle: {
     fontSize: theme.typography.fontSize.lg,

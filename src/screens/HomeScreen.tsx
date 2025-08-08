@@ -1,19 +1,28 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, RefreshControl, TouchableOpacity, Animated, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, RefreshControl, TouchableOpacity, Animated, ScrollView, Dimensions } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 
 import { HomeScreenProps } from '../navigation/types';
 import { theme } from '../theme';
+import uiTheme, { bottomNavHeight, spacing } from '../theme/uiTheme';
 import Card from '../components/ui/Card';
+import ModernCard from '../components/ui/ModernCard';
 import Avatar from '../components/ui/Avatar';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import Button from '../components/ui/Button';
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(false);
+  
+  // Responsive calculations
+  const isSmallScreen = SCREEN_WIDTH < 375;
+  const cardMargin = SCREEN_WIDTH * 0.04; // 4% of screen width
+  const headerPadding = SCREEN_WIDTH * 0.05; // 5% of screen width
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -186,53 +195,65 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: theme.spacing.lg,
-    paddingBottom: theme.spacing.md,
-    backgroundColor: theme.colors.background,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.outline,
+    paddingHorizontal: Math.max(theme.spacing.lg, SCREEN_WIDTH * 0.05),
+    paddingBottom: theme.spacing.lg,
+    backgroundColor: theme.colors.white,
+    borderBottomWidth: 0,
+    ...theme.shadows.xs,
   },
   headerTitle: {
-    fontSize: theme.typography.fontSize['2xl'],
+    fontSize: SCREEN_WIDTH > 375 ? theme.typography.fontSize['3xl'] : theme.typography.fontSize['2xl'],
     fontWeight: theme.typography.fontWeight.bold,
     color: theme.colors.primary,
+    letterSpacing: theme.typography.letterSpacing.tight,
   },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: theme.spacing.sm,
   },
   headerButton: {
-    padding: theme.spacing.sm,
-    marginLeft: theme.spacing.sm,
+    padding: theme.spacing.xs,
+    borderRadius: theme.borderRadius.full,
+    backgroundColor: theme.colors.gray[50],
     position: 'relative',
-  },
-  notificationBadge: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    backgroundColor: theme.colors.error,
-    borderRadius: 8,
-    minWidth: 16,
-    height: 16,
+    width: Math.max(36, theme.touchTarget.minHeight * 0.8),
+    height: Math.max(36, theme.touchTarget.minHeight * 0.8),
     alignItems: 'center',
     justifyContent: 'center',
   },
+  notificationBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    backgroundColor: theme.colors.error,
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: theme.colors.white,
+  },
   badgeText: {
     color: theme.colors.white,
-    fontSize: 10,
+    fontSize: theme.typography.fontSize.xs,
     fontWeight: theme.typography.fontWeight.bold,
   },
   content: {
     flex: 1,
   },
   scrollContent: {
-    padding: theme.spacing.lg,
+    paddingHorizontal: spacing(2),
+    paddingTop: spacing(2),
+    paddingBottom: bottomNavHeight + spacing(3), // Proper bottom nav clearance
   },
   welcomeCard: {
     marginBottom: theme.spacing.lg,
+    borderRadius: theme.borderRadius.lg,
   },
   welcomeContent: {
-    alignItems: 'center',
+    alignItems: 'flex-start',
   },
   welcomeHeader: {
     flexDirection: 'row',
@@ -241,13 +262,14 @@ const styles = StyleSheet.create({
   },
   welcomeText: {
     flex: 1,
-    marginLeft: theme.spacing.md,
+    marginLeft: theme.spacing.lg,
   },
   welcomeTitle: {
-    fontSize: theme.typography.fontSize.lg,
-    fontWeight: theme.typography.fontWeight.semibold,
+    fontSize: SCREEN_WIDTH > 375 ? theme.typography.fontSize.xl : theme.typography.fontSize.lg,
+    fontWeight: theme.typography.fontWeight.bold,
     color: theme.colors.text,
-    marginBottom: theme.spacing.xs,
+    marginBottom: theme.spacing.sm,
+    letterSpacing: theme.typography.letterSpacing.tight,
   },
   welcomeSubtitle: {
     fontSize: theme.typography.fontSize.base,
@@ -258,26 +280,29 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   sectionTitle: {
-    fontSize: theme.typography.fontSize.xl,
+    fontSize: SCREEN_WIDTH > 375 ? theme.typography.fontSize.xl : theme.typography.fontSize.lg,
     fontWeight: theme.typography.fontWeight.bold,
     color: theme.colors.text,
     marginBottom: theme.spacing.lg,
+    letterSpacing: theme.typography.letterSpacing.tight,
   },
   placeholderCard: {
     marginBottom: theme.spacing.xl,
+    borderRadius: theme.borderRadius.lg,
   },
   placeholderContent: {
     alignItems: 'center',
-    paddingVertical: theme.spacing.lg,
+    paddingVertical: theme.spacing.xl,
   },
   placeholderIcon: {
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.xl,
+    opacity: 0.6,
   },
   placeholderTitle: {
-    fontSize: theme.typography.fontSize.lg,
-    fontWeight: theme.typography.fontWeight.semibold,
+    fontSize: SCREEN_WIDTH > 375 ? theme.typography.fontSize.xl : theme.typography.fontSize.lg,
+    fontWeight: theme.typography.fontWeight.bold,
     color: theme.colors.text,
-    marginBottom: theme.spacing.sm,
+    marginBottom: theme.spacing.lg,
     textAlign: 'center',
   },
   placeholderText: {
@@ -285,18 +310,19 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     textAlign: 'center',
     lineHeight: theme.typography.fontSize.base * theme.typography.lineHeight.relaxed,
-    maxWidth: 280,
+    maxWidth: SCREEN_WIDTH * 0.8,
   },
   mockTitle: {
     fontSize: theme.typography.fontSize.lg,
     fontWeight: theme.typography.fontWeight.semibold,
     color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.lg,
     fontStyle: 'italic',
   },
   mockCard: {
     marginBottom: theme.spacing.md,
-    opacity: 0.7,
+    opacity: 0.8,
+    borderRadius: theme.borderRadius.lg,
   },
   mockItem: {
     flexDirection: 'row',
@@ -304,7 +330,7 @@ const styles = StyleSheet.create({
   },
   mockContent: {
     flex: 1,
-    marginLeft: theme.spacing.md,
+    marginLeft: theme.spacing.lg,
   },
   mockUser: {
     fontSize: theme.typography.fontSize.base,
@@ -315,7 +341,8 @@ const styles = StyleSheet.create({
   mockPost: {
     fontSize: theme.typography.fontSize.base,
     color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.xs,
+    marginBottom: theme.spacing.sm,
+    lineHeight: theme.typography.fontSize.base * theme.typography.lineHeight.normal,
   },
   mockTime: {
     fontSize: theme.typography.fontSize.sm,
@@ -326,15 +353,15 @@ const styles = StyleSheet.create({
   },
   fab: {
     position: 'absolute',
-    bottom: 100, // Above tab bar
-    right: theme.spacing.lg,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    bottom: Math.max(80, SCREEN_HEIGHT * 0.11),
+    right: Math.max(theme.spacing.md, SCREEN_WIDTH * 0.04),
+    width: Math.max(48, SCREEN_WIDTH * 0.12),
+    height: Math.max(48, SCREEN_WIDTH * 0.12),
+    borderRadius: Math.max(24, SCREEN_WIDTH * 0.06),
     backgroundColor: theme.colors.secondary,
     alignItems: 'center',
     justifyContent: 'center',
-    ...theme.shadows.lg,
+    ...theme.shadows.sm,
     elevation: 8,
   },
 });

@@ -1,4 +1,22 @@
-import { Platform } from 'react-native';
+import { Platform, Dimensions } from 'react-native';
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+// More refined responsive scaling for smoother UI
+const getResponsiveSize = (baseSize: number): number => {
+  const scale = Math.min(SCREEN_WIDTH / 375, 1.2); // Cap at 120% for very large screens
+  return Math.max(baseSize * scale, baseSize * 0.85); // Min 85% of original size
+};
+
+const getResponsiveFontSize = (baseSize: number): number => {
+  const scale = Math.min(SCREEN_WIDTH / 375, 1.15); // Gentler font scaling
+  return Math.max(baseSize * scale, baseSize * 0.9); // Min 90% for readability
+};
+
+const getResponsiveSpacing = (baseSpacing: number): number => {
+  const scale = Math.min(SCREEN_WIDTH / 375, 1.1); // Conservative spacing scaling
+  return Math.max(baseSpacing * scale, baseSpacing * 0.8); // Min 80% of original
+};
 
 export interface Theme {
   colors: {
@@ -45,6 +63,7 @@ export interface Theme {
       '3xl': number;
     };
     fontWeight: {
+      light: '300';
       normal: '400';
       medium: '500';
       semibold: '600';
@@ -56,6 +75,12 @@ export interface Theme {
       relaxed: number;
       loose: number;
     };
+    letterSpacing: {
+      tight: number;
+      normal: number;
+      wide: number;
+      wider: number;
+    };
   };
   spacing: {
     xs: number;
@@ -64,17 +89,22 @@ export interface Theme {
     lg: number;
     xl: number;
     xxl: number;
+    '3xl': number;
   };
   borderRadius: {
+    none: number;
+    xs: number;
     sm: number;
     md: number;
     lg: number;
     xl: number;
     xxl: number;
+    '3xl': number;
     full: number;
   };
   shadows: {
     none: any;
+    xs: any;
     sm: any;
     md: any;
     lg: any;
@@ -82,9 +112,17 @@ export interface Theme {
   };
   animation: {
     duration: {
+      instant: number;
       fast: number;
       normal: number;
       slow: number;
+      slower: number;
+    };
+    easing: {
+      ease: 'ease';
+      easeIn: 'ease-in';
+      easeOut: 'ease-out';
+      easeInOut: 'ease-in-out';
     };
   };
   touchTarget: {
@@ -94,36 +132,36 @@ export interface Theme {
 }
 
 const lightColors = {
-  primary: '#FF6B35',
-  primaryLight: '#FF8A5C',
-  primaryDark: '#E55A2E',
-  secondary: '#FFB85C',
-  secondaryLight: '#FFCC80',
-  secondaryDark: '#F57C00',
-  success: '#22C55E',
+  primary: '#E91E63',
+  primaryLight: '#F48FB1',
+  primaryDark: '#C2185B',
+  secondary: '#FF6B35',
+  secondaryLight: '#FF8A66',
+  secondaryDark: '#E55A2E',
+  success: '#10B981',
   error: '#EF4444',
   warning: '#F59E0B',
   info: '#3B82F6',
   background: '#FFFFFF',
-  surface: '#FAFAFA',
-  surfaceVariant: '#F5F5F5',
-  outline: '#E5E5E5',
-  text: '#1F2937',
-  textSecondary: '#6B7280',
-  textDisabled: '#9CA3AF',
+  surface: '#FEFEFE',
+  surfaceVariant: '#F8FAFC',
+  outline: '#F1F5F9',
+  text: '#0F172A',
+  textSecondary: '#64748B',
+  textDisabled: '#94A3B8',
   white: '#FFFFFF',
   black: '#000000',
   gray: {
-    50: '#F9FAFB',
-    100: '#F3F4F6',
-    200: '#E5E7EB',
-    300: '#D1D5DB',
-    400: '#9CA3AF',
-    500: '#6B7280',
-    600: '#4B5563',
-    700: '#374151',
-    800: '#1F2937',
-    900: '#111827',
+    50: '#F8FAFC',
+    100: '#F1F5F9',
+    200: '#E2E8F0',
+    300: '#CBD5E1',
+    400: '#94A3B8',
+    500: '#64748B',
+    600: '#475569',
+    700: '#334155',
+    800: '#1E293B',
+    900: '#0F172A',
   },
 };
 
@@ -163,15 +201,16 @@ const darkColors = {
 
 const typography = {
   fontSize: {
-    xs: 12,
-    sm: 14,
-    base: 16,
-    lg: 18,
-    xl: 20,
-    '2xl': 24,
-    '3xl': 32,
+    xs: getResponsiveFontSize(12),
+    sm: getResponsiveFontSize(14),
+    base: getResponsiveFontSize(16),
+    lg: getResponsiveFontSize(18),
+    xl: getResponsiveFontSize(20),
+    '2xl': getResponsiveFontSize(24),
+    '3xl': getResponsiveFontSize(28),
   },
   fontWeight: {
+    light: '300' as const,
     normal: '400' as const,
     medium: '500' as const,
     semibold: '600' as const,
@@ -179,89 +218,118 @@ const typography = {
   },
   lineHeight: {
     tight: 1.2,
-    normal: 1.4,
+    normal: 1.35,
     relaxed: 1.5,
     loose: 1.6,
+  },
+  letterSpacing: {
+    tight: -0.2,
+    normal: 0,
+    wide: 0.2,
+    wider: 0.4,
   },
 };
 
 const spacing = {
-  xs: 4,
-  sm: 8,
-  md: 16,
-  lg: 24,
-  xl: 32,
-  xxl: 48,
+  xs: getResponsiveSpacing(4),
+  sm: getResponsiveSpacing(8),
+  md: getResponsiveSpacing(12),
+  lg: getResponsiveSpacing(16),
+  xl: getResponsiveSpacing(24),
+  xxl: getResponsiveSpacing(32),
+  '3xl': getResponsiveSpacing(48),
 };
 
 const borderRadius = {
+  none: 0,
+  xs: 2,
   sm: 4,
   md: 8,
   lg: 12,
   xl: 16,
-  xxl: 24,
+  xxl: 20,
+  '3xl': 24,
   full: 9999,
 };
 
 const shadows = {
   none: {},
-  sm: Platform.select({
+  xs: Platform.select({
     ios: {
-      shadowColor: '#000',
+      shadowColor: '#0F172A',
       shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.18,
-      shadowRadius: 1.0,
+      shadowOpacity: 0.05,
+      shadowRadius: 1,
     },
     android: {
-      elevation: 2,
+      elevation: 1,
+    },
+  }),
+  sm: Platform.select({
+    ios: {
+      shadowColor: '#0F172A',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 3,
+    },
+    android: {
+      elevation: 3,
     },
   }),
   md: Platform.select({
     ios: {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.25,
-      shadowRadius: 3.84,
+      shadowColor: '#0F172A',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.12,
+      shadowRadius: 8,
     },
     android: {
-      elevation: 5,
+      elevation: 6,
     },
   }),
   lg: Platform.select({
     ios: {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.30,
-      shadowRadius: 4.65,
+      shadowColor: '#0F172A',
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.15,
+      shadowRadius: 12,
     },
     android: {
-      elevation: 8,
+      elevation: 12,
     },
   }),
   xl: Platform.select({
     ios: {
-      shadowColor: '#000',
+      shadowColor: '#0F172A',
       shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: 0.44,
-      shadowRadius: 10.32,
+      shadowOpacity: 0.2,
+      shadowRadius: 16,
     },
     android: {
-      elevation: 16,
+      elevation: 20,
     },
   }),
 };
 
 const animation = {
   duration: {
+    instant: 75,
     fast: 150,
-    normal: 300,
-    slow: 500,
+    normal: 250,
+    slow: 400,
+    slower: 600,
+  },
+  easing: {
+    ease: 'ease' as const,
+    easeIn: 'ease-in' as const,
+    easeOut: 'ease-out' as const,
+    easeInOut: 'ease-in-out' as const,
   },
 };
 
 const touchTarget = {
-  minHeight: 44,
-  minWidth: 44,
+  minHeight: getResponsiveSize(44),
+  minWidth: getResponsiveSize(44),
 };
 
 export const lightTheme: Theme = {
@@ -283,6 +351,10 @@ export const darkTheme: Theme = {
   animation,
   touchTarget,
 };
+
+// Export modern UI theme alongside legacy theme for gradual migration
+export { default as uiTheme } from './uiTheme';
+export * from './uiTheme';
 
 export const theme = lightTheme;
 export default theme;

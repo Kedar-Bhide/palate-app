@@ -21,14 +21,15 @@ try {
 }
 
 import { theme } from '../../theme';
+import uiTheme, { bottomNavHeight, colors, spacing, layout } from '../../theme/uiTheme';
 import { useTabNavigation } from '../../hooks/useTabNavigation';
 import { TabParamList } from '../../navigation/types';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const TAB_BAR_HEIGHT = 80;
-const CAMERA_BUTTON_SIZE = 60;
-const REGULAR_ICON_SIZE = 24;
-const CAMERA_ICON_SIZE = 28;
+// Use centralized theme constants
+const TAB_BAR_HEIGHT = bottomNavHeight;
+const CAMERA_BUTTON_SIZE = layout.touchTarget;
+const REGULAR_ICON_SIZE = 22;
+const CAMERA_ICON_SIZE = 24;
 
 interface TabIconProps {
   name: keyof typeof MaterialIcons.glyphMap;
@@ -295,8 +296,8 @@ export const CustomTabBar: React.FC<BottomTabBarProps> = ({
   const tabBarStyle = [
     styles.tabBar,
     {
-      paddingBottom: Math.max(insets.bottom, theme.spacing.sm),
-      height: TAB_BAR_HEIGHT + Math.max(insets.bottom, theme.spacing.sm),
+      paddingBottom: Math.max(insets.bottom, spacing(0.5)),
+      height: TAB_BAR_HEIGHT + Math.max(insets.bottom, spacing(0.5)),
     },
   ];
 
@@ -343,31 +344,37 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: Platform.OS === 'ios' ? 'transparent' : theme.colors.background,
-    borderTopWidth: Platform.OS === 'ios' ? 0 : StyleSheet.hairlineWidth,
-    borderTopColor: theme.colors.outline,
-    ...Platform.select({
-      android: theme.shadows.lg,
-    }),
+    backgroundColor: Platform.OS === 'ios' ? 'transparent' : colors.surface,
+    borderTopWidth: 0,
+    marginHorizontal: spacing(1),
+    marginBottom: spacing(0.5),
+    borderRadius: uiTheme.radii.card,
+    overflow: 'hidden',
+    ...uiTheme.shadows.small,
   },
   tabBarContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    paddingTop: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.sm,
+    paddingTop: spacing(0.5),
+    paddingHorizontal: spacing(1),
+    backgroundColor: Platform.OS === 'ios' ? colors.surface : colors.surface,
+    height: TAB_BAR_HEIGHT,
   },
   regularTab: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: theme.spacing.sm,
-    minHeight: theme.touchTarget.minHeight,
+    paddingVertical: theme.spacing.xs,
+    minHeight: layout.touchTarget * 0.8,
+    borderRadius: theme.borderRadius.md,
   },
   tabContent: {
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
+    width: theme.touchTarget.minWidth,
+    height: theme.touchTarget.minHeight * 0.8,
   },
   cameraTabContainer: {
     flex: 1,
@@ -379,32 +386,34 @@ const styles = StyleSheet.create({
     width: CAMERA_BUTTON_SIZE,
     height: CAMERA_BUTTON_SIZE,
     borderRadius: CAMERA_BUTTON_SIZE / 2,
-    backgroundColor: theme.colors.primary,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    ...theme.shadows.lg,
-    borderWidth: 3,
-    borderColor: theme.colors.background,
+    ...uiTheme.shadows.small,
+    borderWidth: 2,
+    borderColor: colors.white,
   },
   cameraTabFocused: {
     backgroundColor: theme.colors.primaryDark,
+    transform: [{ scale: 1.05 }],
     ...Platform.select({
-      ios: theme.shadows.xl,
-      android: { elevation: 12 },
+      ios: theme.shadows.lg,
+      android: { elevation: 16 },
     }),
   },
   badge: {
     position: 'absolute',
-    top: -8,
-    right: -8,
+    top: -6,
+    right: -6,
     backgroundColor: theme.colors.error,
-    borderRadius: 10,
+    borderRadius: 12,
     minWidth: 20,
     height: 20,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: theme.colors.background,
+    borderColor: theme.colors.white,
+    ...theme.shadows.sm,
   },
   badgeText: {
     color: theme.colors.white,
