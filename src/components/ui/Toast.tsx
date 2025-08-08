@@ -5,8 +5,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   Animated,
-  PanGestureHandler,
-  PanGestureHandlerGestureEvent,
   ViewStyle,
   TextStyle,
   SafeAreaView,
@@ -105,35 +103,7 @@ export const Toast: React.FC<ToastProps> = ({
     });
   };
 
-  const onGestureEvent = (event: PanGestureHandlerGestureEvent) => {
-    const { translationY } = event.nativeEvent;
-    
-    if (position === 'top' && translationY < 0) {
-      panY.setValue(translationY);
-    } else if (position === 'bottom' && translationY > 0) {
-      panY.setValue(translationY);
-    }
-  };
-
-  const onHandlerStateChange = (event: any) => {
-    const { translationY, velocityY } = event.nativeEvent;
-    const threshold = 50;
-    const velocityThreshold = 500;
-    
-    const shouldDismiss = 
-      (position === 'top' && (translationY < -threshold || velocityY < -velocityThreshold)) ||
-      (position === 'bottom' && (translationY > threshold || velocityY > velocityThreshold));
-
-    if (shouldDismiss) {
-      handleDismiss();
-    } else {
-      // Snap back to original position
-      Animated.spring(panY, {
-        toValue: 0,
-        useNativeDriver: true,
-      }).start();
-    }
-  };
+  // Gesture handling removed for now - can be re-added later with proper gesture library
 
   const getVariantStyles = () => {
     switch (variant) {
@@ -236,18 +206,7 @@ export const Toast: React.FC<ToastProps> = ({
     </Animated.View>
   );
 
-  if (swipeToDismiss) {
-    return (
-      <PanGestureHandler
-        onGestureEvent={onGestureEvent}
-        onHandlerStateChange={onHandlerStateChange}
-        activeOffsetY={[-10, 10]}
-      >
-        {content}
-      </PanGestureHandler>
-    );
-  }
-
+  // Simplified without gesture handling for now
   return content;
 };
 

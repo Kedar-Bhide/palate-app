@@ -4,9 +4,8 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../hooks/useAuth';
 import AuthNavigator from './AuthNavigator';
-import MainScreen from '../screens/MainScreen';
-import Colors from '../constants/Colors';
-import Layout from '../constants/Layout';
+import TabNavigator from './TabNavigator';
+import { theme } from '../theme';
 
 export type RootStackParamList = {
   Auth: undefined;
@@ -18,7 +17,7 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 function LoadingScreen() {
   return (
     <View style={styles.loadingContainer}>
-      <ActivityIndicator size="large" color={Colors.light.primary} />
+      <ActivityIndicator size="large" color={theme.colors.primary} />
     </View>
   );
 }
@@ -38,7 +37,7 @@ function AppNavigator() {
       }}
     >
       {isAuthenticated ? (
-        <Stack.Screen name="Main" component={MainScreen} />
+        <Stack.Screen name="Main" component={TabNavigator} />
       ) : (
         <Stack.Screen name="Auth" component={AuthNavigator} />
       )}
@@ -59,6 +58,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Colors.light.background,
+    backgroundColor: theme.colors.background,
   },
 });
