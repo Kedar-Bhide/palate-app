@@ -7,11 +7,11 @@ import { Platform, Dimensions } from 'react-native';
 
 const { width, height } = Dimensions.get('window');
 
-// Color palette - modern, accessible design
+// Color palette - modern, accessible design with gentle blue
 export const colors = {
-  primary: '#E91E63',
-  primaryLight: '#F48FB1',
-  primaryDark: '#C2185B',
+  primary: '#3B82F6',
+  primaryLight: '#93C5FD',
+  primaryDark: '#1E40AF',
   secondary: '#FF6B35',
   background: '#FFFFFF',
   surface: '#FEFEFE',

@@ -346,9 +346,9 @@ const styles = StyleSheet.create({
     right: 0,
     backgroundColor: Platform.OS === 'ios' ? 'transparent' : colors.surface,
     borderTopWidth: 0,
-    marginHorizontal: spacing(1),
-    marginBottom: spacing(0.5),
-    borderRadius: uiTheme.radii.card,
+    marginHorizontal: 0, // Full width - no margins
+    marginBottom: 0, // Sits at very bottom
+    borderRadius: 0, // No rounded corners for full-width
     overflow: 'hidden',
     ...uiTheme.shadows.small,
   },
@@ -406,9 +406,9 @@ const styles = StyleSheet.create({
     top: -6,
     right: -6,
     backgroundColor: theme.colors.error,
-    borderRadius: 12,
-    minWidth: 20,
-    height: 20,
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
@@ -417,9 +417,10 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     color: theme.colors.white,
-    fontSize: theme.typography.fontSize.xs,
+    fontSize: 10, // Smaller font for better fit
     fontWeight: theme.typography.fontWeight.bold,
     textAlign: 'center',
+    lineHeight: 12,
   },
 });
 

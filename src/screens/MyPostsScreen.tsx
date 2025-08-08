@@ -102,11 +102,11 @@ const MyPostsScreen: React.FC<MyPostsScreenProps> = ({ navigation }) => {
               Share Food
             </Button>
             <Button
-              variant="outline"
+              variant="primary"
               size="medium"
               onPress={handleViewProfile}
               style={styles.actionButton}
-              icon={<MaterialIcons name="person" size={20} color={theme.colors.primary} />}
+              icon={<MaterialIcons name="person" size={20} color={uiTheme.colors.white} />}
             >
               Edit Profile
             </Button>

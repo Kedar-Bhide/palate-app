@@ -127,15 +127,17 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
             </View>
           </View>
 
-          <Button
-            variant="outline"
-            size="medium"
-            onPress={handleEditProfile}
+          <TouchableOpacity
             style={styles.editButton}
-            icon={<MaterialIcons name="edit" size={20} color={theme.colors.primary} />}
+            onPress={handleEditProfile}
+            accessibilityRole="button"
+            accessibilityLabel="Edit profile"
           >
-            Edit Profile
-          </Button>
+            <View style={styles.editButtonIcon}>
+              <MaterialIcons name="edit" size={24} color={uiTheme.colors.primary} />
+            </View>
+            <Text style={styles.editButtonText}>Edit Profile</Text>
+          </TouchableOpacity>
         </Card>
 
         {/* Quick Actions */}
@@ -241,15 +243,17 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
 
         {/* Sign Out */}
         <View style={styles.signOutContainer}>
-          <Button
-            variant="outline"
-            size="large"
-            onPress={handleSignOut}
+          <TouchableOpacity
             style={styles.signOutButton}
-            textStyle={styles.signOutText}
+            onPress={handleSignOut}
+            accessibilityRole="button"
+            accessibilityLabel="Sign out"
           >
-            Sign Out
-          </Button>
+            <View style={styles.signOutIcon}>
+              <MaterialIcons name="logout" size={24} color={theme.colors.error} />
+            </View>
+            <Text style={styles.signOutText}>Sign Out</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -361,7 +365,28 @@ const styles = StyleSheet.create({
   },
   editButton: {
     alignSelf: 'center',
+    alignItems: 'center',
+    paddingVertical: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.xl,
+    borderRadius: theme.borderRadius.md,
+    backgroundColor: theme.colors.gray[50],
     minWidth: SCREEN_WIDTH * 0.4,
+  },
+  editButtonIcon: {
+    width: SCREEN_WIDTH > 375 ? 60 : 50,
+    height: SCREEN_WIDTH > 375 ? 60 : 50,
+    borderRadius: SCREEN_WIDTH > 375 ? 30 : 25,
+    backgroundColor: theme.colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: theme.spacing.lg,
+    ...theme.shadows.sm,
+  },
+  editButtonText: {
+    fontSize: theme.typography.fontSize.sm,
+    fontWeight: theme.typography.fontWeight.semibold,
+    color: theme.colors.text,
+    textAlign: 'center',
   },
   actionsCard: {
     marginBottom: theme.spacing.lg,
@@ -468,13 +493,29 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing['3xl'],
   },
   signOutButton: {
-    borderColor: theme.colors.error,
+    alignSelf: 'center',
+    alignItems: 'center',
+    paddingVertical: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.xl,
+    borderRadius: theme.borderRadius.md,
+    backgroundColor: theme.colors.gray[50],
     minWidth: SCREEN_WIDTH * 0.6,
-    borderWidth: 1.5,
+  },
+  signOutIcon: {
+    width: SCREEN_WIDTH > 375 ? 60 : 50,
+    height: SCREEN_WIDTH > 375 ? 60 : 50,
+    borderRadius: SCREEN_WIDTH > 375 ? 30 : 25,
+    backgroundColor: theme.colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: theme.spacing.lg,
+    ...theme.shadows.sm,
   },
   signOutText: {
-    color: theme.colors.error,
+    fontSize: theme.typography.fontSize.sm,
     fontWeight: theme.typography.fontWeight.semibold,
+    color: theme.colors.error,
+    textAlign: 'center',
   },
 });
 

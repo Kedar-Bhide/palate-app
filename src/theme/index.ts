@@ -132,9 +132,9 @@ export interface Theme {
 }
 
 const lightColors = {
-  primary: '#E91E63',
-  primaryLight: '#F48FB1',
-  primaryDark: '#C2185B',
+  primary: '#3B82F6',
+  primaryLight: '#93C5FD',
+  primaryDark: '#1E40AF',
   secondary: '#FF6B35',
   secondaryLight: '#FF8A66',
   secondaryDark: '#E55A2E',
@@ -166,9 +166,9 @@ const lightColors = {
 };
 
 const darkColors = {
-  primary: '#FF6B35',
-  primaryLight: '#FF8A5C',
-  primaryDark: '#E55A2E',
+  primary: '#3B82F6',
+  primaryLight: '#93C5FD',
+  primaryDark: '#1E40AF',
   secondary: '#FFB85C',
   secondaryLight: '#FFCC80',
   secondaryDark: '#F57C00',
