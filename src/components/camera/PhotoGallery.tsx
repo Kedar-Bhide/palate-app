@@ -76,7 +76,7 @@ export default function PhotoGallery({
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ImagePicker.MediaType.Images,
         allowsMultipleSelection: allowMultiple && localSelection.length < maxPhotos,
         selectionLimit: allowMultiple ? Math.max(1, maxPhotos - localSelection.length) : 1,
         quality: 1,
