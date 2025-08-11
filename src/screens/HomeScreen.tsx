@@ -1,49 +1,113 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, RefreshControl, TouchableOpacity, Animated, ScrollView, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 
 import { HomeScreenProps } from '../navigation/types';
 import { theme } from '../theme';
-import uiTheme, { bottomNavHeight, spacing } from '../theme/uiTheme';
-import Card from '../components/ui/Card';
-import ModernCard from '../components/ui/ModernCard';
-import Avatar from '../components/ui/Avatar';
-import LoadingSpinner from '../components/ui/LoadingSpinner';
-import Button from '../components/ui/Button';
+import uiTheme, { bottomNavHeight, spacing, colors, fonts } from '../theme/uiTheme';
+import { useFeed } from '../hooks/useFeed';
+import PostsList from '../components/posts/PostsList';
+import { FeedAlgorithm } from '../lib/feedUtils';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const insets = useSafeAreaInsets();
-  const [refreshing, setRefreshing] = useState(false);
-  const [loading, setLoading] = useState(false);
-  
-  // Responsive calculations
-  const isSmallScreen = SCREEN_WIDTH < 375;
-  const cardMargin = SCREEN_WIDTH * 0.04; // 4% of screen width
-  const headerPadding = SCREEN_WIDTH * 0.05; // 5% of screen width
+  const [algorithm, setAlgorithm] = useState<FeedAlgorithm>('recent');
 
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    // Simulate API call
-    setTimeout(() => {
-      setRefreshing(false);
-      console.log('Feed refreshed');
-    }, 2000);
+  // Feed hook
+  const feed = useFeed({ 
+    algorithm,
+    pageSize: 10,
+    enableRealtime: true,
+    enableCache: true,
+  });
+
+  // Handle algorithm change
+  const handleAlgorithmChange = useCallback((newAlgorithm: FeedAlgorithm) => {
+    setAlgorithm(newAlgorithm);
+    feed.changeAlgorithm(newAlgorithm);
+  }, [feed]);
+
+  // Handle user press
+  const handleUserPress = useCallback((userId: string) => {
+    console.log('User pressed:', userId);
+    // TODO: Navigate to user profile when stack navigator is set up
+    // navigation.navigate('UserProfile', { userId });
   }, []);
 
-  const handleSearch = () => {
+  // Handle comment press
+  const handleCommentPress = useCallback((postId: string) => {
+    console.log('Comment pressed for post:', postId);
+    // navigation.navigate('PostDetail', { postId });
+  }, []);
+
+  // Handle share press
+  const handleSharePress = useCallback((postId: string) => {
+    console.log('Share pressed for post:', postId);
+    // Implement share functionality
+  }, []);
+
+  // Handle search
+  const handleSearch = useCallback(() => {
     console.log('Search pressed');
-  };
+    // navigation.navigate('Search');
+  }, []);
 
-  const handleQuickPost = () => {
-    navigation.navigate('Camera');
-  };
-
-  const handleNotifications = () => {
+  // Handle notifications
+  const handleNotifications = useCallback(() => {
     console.log('Notifications pressed');
-  };
+    // navigation.navigate('Notifications');
+  }, []);
+
+  // Handle quick post
+  const handleQuickPost = useCallback(() => {
+    navigation.navigate('Camera');
+  }, [navigation]);
+
+  // Render header component
+  const renderHeader = () => (
+    <View>
+      {/* Algorithm Toggle */}
+      <View style={styles.algorithmSection}>
+        <View style={styles.algorithmToggle}>
+          <TouchableOpacity
+            style={[
+              styles.algorithmButton,
+              algorithm === 'recent' && styles.algorithmButtonActive,
+            ]}
+            onPress={() => handleAlgorithmChange('recent')}
+          >
+            <Text
+              style={[
+                styles.algorithmButtonText,
+                algorithm === 'recent' && styles.algorithmButtonTextActive,
+              ]}
+            >
+              Recent
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.algorithmButton,
+              algorithm === 'popular' && styles.algorithmButtonActive,
+            ]}
+            onPress={() => handleAlgorithmChange('popular')}
+          >
+            <Text
+              style={[
+                styles.algorithmButtonText,
+                algorithm === 'popular' && styles.algorithmButtonTextActive,
+              ]}
+            >
+              Popular
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -73,104 +137,24 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         </View>
       </View>
 
-      {/* Content */}
-      <ScrollView
-        style={styles.content}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={[theme.colors.primary]}
-            tintColor={theme.colors.primary}
-            title="Pull to refresh your feed"
-            titleColor={theme.colors.textSecondary}
-          />
-        }
-      >
-        {/* Welcome Section */}
-        <Card variant="elevated" padding="large" style={styles.welcomeCard}>
-          <View style={styles.welcomeContent}>
-            <View style={styles.welcomeHeader}>
-              <Avatar size="md" name="You" />
-              <View style={styles.welcomeText}>
-                <Text style={styles.welcomeTitle}>Welcome back!</Text>
-                <Text style={styles.welcomeSubtitle}>
-                  What delicious moments will you share today?
-                </Text>
-              </View>
-            </View>
-          </View>
-        </Card>
-
-        {/* Feed Placeholder */}
-        <View style={styles.feedSection}>
-          <Text style={styles.sectionTitle}>Friends Feed</Text>
-          
-          <Card variant="outlined" padding="large" style={styles.placeholderCard}>
-            <View style={styles.placeholderContent}>
-              <MaterialIcons
-                name="restaurant"
-                size={48}
-                color={theme.colors.primary}
-                style={styles.placeholderIcon}
-              />
-              <Text style={styles.placeholderTitle}>
-                Your feed is waiting
-              </Text>
-              <Text style={styles.placeholderText}>
-                Follow friends to see their delicious food adventures, or be the first to share yours!
-              </Text>
-            </View>
-          </Card>
-
-          {/* Mock Feed Items */}
-          <Text style={styles.mockTitle}>Coming Soon:</Text>
-          
-          <Card variant="flat" padding="medium" style={styles.mockCard}>
-            <View style={styles.mockItem}>
-              <Avatar size="sm" name="Sarah Chen" />
-              <View style={styles.mockContent}>
-                <Text style={styles.mockUser}>Sarah Chen</Text>
-                <Text style={styles.mockPost}>Amazing ramen at Ichiran! 🍜</Text>
-                <Text style={styles.mockTime}>2 hours ago</Text>
-              </View>
-            </View>
-          </Card>
-
-          <Card variant="flat" padding="medium" style={styles.mockCard}>
-            <View style={styles.mockItem}>
-              <Avatar size="sm" name="Mike Johnson" />
-              <View style={styles.mockContent}>
-                <Text style={styles.mockUser}>Mike Johnson</Text>
-                <Text style={styles.mockPost}>Homemade pizza night! 🍕</Text>
-                <Text style={styles.mockTime}>4 hours ago</Text>
-              </View>
-            </View>
-          </Card>
-
-          <Card variant="flat" padding="medium" style={styles.mockCard}>
-            <View style={styles.mockItem}>
-              <Avatar size="sm" name="Emma Wilson" />
-              <View style={styles.mockContent}>
-                <Text style={styles.mockUser}>Emma Wilson</Text>
-                <Text style={styles.mockPost}>Fresh sushi date night 🍣</Text>
-                <Text style={styles.mockTime}>6 hours ago</Text>
-              </View>
-            </View>
-          </Card>
-        </View>
-
-        {/* Loading State */}
-        {loading && (
-          <LoadingSpinner
-            size="large"
-            text="Loading feed..."
-            style={styles.loadingSpinner}
-          />
-        )}
-      </ScrollView>
+      {/* Feed */}
+      <PostsList
+        posts={feed.posts}
+        loading={feed.loading}
+        refreshing={feed.refreshing}
+        loadingMore={feed.loadingMore}
+        hasMore={feed.hasMore}
+        error={feed.error}
+        interactions={feed.interactions}
+        onRefresh={feed.refreshFeed}
+        onLoadMore={feed.loadMorePosts}
+        onLike={feed.toggleLike}
+        onComment={handleCommentPress}
+        onShare={handleSharePress}
+        onUserPress={handleUserPress}
+        ListHeaderComponent={renderHeader}
+        contentContainerStyle={styles.feedContentContainer}
+      />
 
       {/* Floating Action Button */}
       <TouchableOpacity
@@ -189,179 +173,129 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: colors.background,
   },
+
+  // Header
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: Math.max(theme.spacing.lg, SCREEN_WIDTH * 0.05),
-    paddingBottom: theme.spacing.lg,
-    backgroundColor: theme.colors.white,
-    borderBottomWidth: 0,
-    ...theme.shadows.xs,
+    paddingHorizontal: spacing(3),
+    paddingBottom: spacing(2),
+    backgroundColor: colors.white,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.outline,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
+
   headerTitle: {
-    fontSize: SCREEN_WIDTH > 375 ? theme.typography.fontSize['3xl'] : theme.typography.fontSize['2xl'],
-    fontWeight: theme.typography.fontWeight.bold,
-    color: theme.colors.primary,
-    letterSpacing: theme.typography.letterSpacing.tight,
+    fontSize: SCREEN_WIDTH > 375 ? fonts.xxxl : fonts.xxl,
+    fontWeight: fonts.weights.bold,
+    color: colors.primary,
   },
+
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.sm,
+    gap: spacing(2),
   },
+
   headerButton: {
-    padding: theme.spacing.xs,
-    borderRadius: theme.borderRadius.full,
-    backgroundColor: theme.colors.gray[50],
-    position: 'relative',
-    width: Math.max(36, theme.touchTarget.minHeight * 0.8),
-    height: Math.max(36, theme.touchTarget.minHeight * 0.8),
+    padding: spacing(2),
+    borderRadius: 20,
+    backgroundColor: colors.surfaceVariant,
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
+    position: 'relative',
   },
+
   notificationBadge: {
     position: 'absolute',
     top: -2,
     right: -2,
-    backgroundColor: theme.colors.error,
+    backgroundColor: colors.error,
     borderRadius: 10,
     minWidth: 18,
     height: 18,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: theme.colors.white,
+    borderColor: colors.white,
   },
+
   badgeText: {
-    color: theme.colors.white,
-    fontSize: theme.typography.fontSize.xs,
-    fontWeight: theme.typography.fontWeight.bold,
+    color: colors.white,
+    fontSize: fonts.xs,
+    fontWeight: fonts.weights.bold,
   },
-  content: {
-    flex: 1,
+
+  // Algorithm Section
+  algorithmSection: {
+    paddingHorizontal: spacing(3),
+    paddingVertical: spacing(2),
+    backgroundColor: colors.white,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.outline,
   },
-  scrollContent: {
-    paddingHorizontal: spacing(2),
-    paddingTop: spacing(2),
-    paddingBottom: bottomNavHeight + spacing(3), // Proper bottom nav clearance
-  },
-  welcomeCard: {
-    marginBottom: theme.spacing.lg,
-    borderRadius: theme.borderRadius.lg,
-  },
-  welcomeContent: {
-    alignItems: 'flex-start',
-  },
-  welcomeHeader: {
+
+  algorithmToggle: {
     flexDirection: 'row',
-    alignItems: 'center',
-    width: '100%',
+    backgroundColor: colors.surfaceVariant,
+    borderRadius: 25,
+    padding: spacing(0.5),
   },
-  welcomeText: {
+
+  algorithmButton: {
     flex: 1,
-    marginLeft: theme.spacing.lg,
-  },
-  welcomeTitle: {
-    fontSize: SCREEN_WIDTH > 375 ? theme.typography.fontSize.xl : theme.typography.fontSize.lg,
-    fontWeight: theme.typography.fontWeight.bold,
-    color: theme.colors.text,
-    marginBottom: theme.spacing.sm,
-    letterSpacing: theme.typography.letterSpacing.tight,
-  },
-  welcomeSubtitle: {
-    fontSize: theme.typography.fontSize.base,
-    color: theme.colors.textSecondary,
-    lineHeight: theme.typography.fontSize.base * theme.typography.lineHeight.relaxed,
-  },
-  feedSection: {
-    flex: 1,
-  },
-  sectionTitle: {
-    fontSize: SCREEN_WIDTH > 375 ? theme.typography.fontSize.xl : theme.typography.fontSize.lg,
-    fontWeight: theme.typography.fontWeight.bold,
-    color: theme.colors.text,
-    marginBottom: theme.spacing.lg,
-    letterSpacing: theme.typography.letterSpacing.tight,
-  },
-  placeholderCard: {
-    marginBottom: theme.spacing.xl,
-    borderRadius: theme.borderRadius.lg,
-  },
-  placeholderContent: {
-    alignItems: 'center',
-    paddingVertical: theme.spacing.xl,
-  },
-  placeholderIcon: {
-    marginBottom: theme.spacing.xl,
-    opacity: 0.6,
-  },
-  placeholderTitle: {
-    fontSize: SCREEN_WIDTH > 375 ? theme.typography.fontSize.xl : theme.typography.fontSize.lg,
-    fontWeight: theme.typography.fontWeight.bold,
-    color: theme.colors.text,
-    marginBottom: theme.spacing.lg,
-    textAlign: 'center',
-  },
-  placeholderText: {
-    fontSize: theme.typography.fontSize.base,
-    color: theme.colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: theme.typography.fontSize.base * theme.typography.lineHeight.relaxed,
-    maxWidth: SCREEN_WIDTH * 0.8,
-  },
-  mockTitle: {
-    fontSize: theme.typography.fontSize.lg,
-    fontWeight: theme.typography.fontWeight.semibold,
-    color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.lg,
-    fontStyle: 'italic',
-  },
-  mockCard: {
-    marginBottom: theme.spacing.md,
-    opacity: 0.8,
-    borderRadius: theme.borderRadius.lg,
-  },
-  mockItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  mockContent: {
-    flex: 1,
-    marginLeft: theme.spacing.lg,
-  },
-  mockUser: {
-    fontSize: theme.typography.fontSize.base,
-    fontWeight: theme.typography.fontWeight.semibold,
-    color: theme.colors.text,
-    marginBottom: theme.spacing.xs,
-  },
-  mockPost: {
-    fontSize: theme.typography.fontSize.base,
-    color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.sm,
-    lineHeight: theme.typography.fontSize.base * theme.typography.lineHeight.normal,
-  },
-  mockTime: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.textSecondary,
-  },
-  loadingSpinner: {
-    marginVertical: theme.spacing.xl,
-  },
-  fab: {
-    position: 'absolute',
-    bottom: Math.max(80, SCREEN_HEIGHT * 0.11),
-    right: Math.max(theme.spacing.md, SCREEN_WIDTH * 0.04),
-    width: Math.max(48, SCREEN_WIDTH * 0.12),
-    height: Math.max(48, SCREEN_WIDTH * 0.12),
-    borderRadius: Math.max(24, SCREEN_WIDTH * 0.06),
-    backgroundColor: theme.colors.secondary,
+    paddingVertical: spacing(1.5),
+    paddingHorizontal: spacing(3),
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    ...theme.shadows.sm,
+  },
+
+  algorithmButtonActive: {
+    backgroundColor: colors.primary,
+  },
+
+  algorithmButtonText: {
+    fontSize: fonts.sm,
+    fontWeight: fonts.weights.medium,
+    color: colors.textSecondary,
+  },
+
+  algorithmButtonTextActive: {
+    color: colors.white,
+    fontWeight: fonts.weights.semibold,
+  },
+
+  // Feed
+  feedContentContainer: {
+    paddingBottom: bottomNavHeight + spacing(4),
+  },
+
+  // FAB
+  fab: {
+    position: 'absolute',
+    bottom: bottomNavHeight + spacing(3),
+    right: spacing(3),
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.secondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
     elevation: 8,
   },
 });
