@@ -137,13 +137,6 @@ export interface FriendStats {
   blocked_users: number;
 }
 
-export interface NotificationPreferences {
-  friend_requests: boolean;
-  friend_accepts: boolean;
-  friend_posts: boolean;
-  mentions: boolean;
-  comments: boolean;
-}
 
 export interface FriendActivity {
   id: string;

@@ -22,7 +22,6 @@ import {
   TextInputRow,
 } from '../components/settings/SettingsSection';
 import PrivacySettings from '../components/settings/PrivacySettings';
-import NotificationSettings from '../components/settings/NotificationSettings';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import Card from '../components/ui/Card';
 
@@ -30,20 +29,18 @@ interface SettingsScreenProps {
   navigation: any;
 }
 
-type SettingsTab = 'main' | 'account' | 'privacy' | 'notifications' | 'app' | 'data' | 'about';
+type SettingsTab = 'main' | 'account' | 'privacy' | 'app' | 'data' | 'about';
 
 export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const { user, signOut } = useAuth();
   const {
     privacySettings,
-    notificationSettings,
     accountSettings,
     appPreferences,
     loading,
     error,
     updatePrivacySettings,
-    updateNotificationSettings,
     updateAccountSettings,
     updateAppPreferences,
     changePassword,
@@ -750,13 +747,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
         <PrivacySettings
           settings={privacySettings}
           onSettingsChange={handlePrivacySettingsChange}
-          loading={loading}
-        />
-      )}
-      {currentTab === 'notifications' && notificationSettings && (
-        <NotificationSettings
-          settings={notificationSettings}
-          onSettingsChange={handleNotificationSettingsChange}
           loading={loading}
         />
       )}

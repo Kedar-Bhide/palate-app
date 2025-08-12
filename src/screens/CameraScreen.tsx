@@ -65,12 +65,12 @@ export default function CameraScreen({ navigation }: CameraScreenProps) {
         Alert.alert(
           'Photo Captured!',
           photoSelection.hasPhotos 
-            ? `${photoSelection.photoCount} photo${photoSelection.photoCount > 1 ? 's' : ''} selected. Continue to manage your photos?`
+            ? `${photoSelection.photoCount} photo${photoSelection.photoCount > 1 ? 's' : ''} selected. Continue to create your post?`
             : 'Photo captured successfully!',
           [
             { text: 'Take Another', style: 'cancel' },
             { 
-              text: photoSelection.hasPhotos ? 'Manage Photos' : 'Continue', 
+              text: photoSelection.hasPhotos ? 'Create Post' : 'Continue', 
               onPress: handleContinueToSelection 
             }
           ]
@@ -132,7 +132,7 @@ export default function CameraScreen({ navigation }: CameraScreenProps) {
         `${addedCount} photo${addedCount > 1 ? 's' : ''} added to your selection.`,
         [
           { text: 'Add More', style: 'cancel' },
-          { text: 'Continue', onPress: handleContinueToSelection }
+          { text: 'Create Post', onPress: handleContinueToSelection }
         ]
       );
     }
@@ -141,13 +141,10 @@ export default function CameraScreen({ navigation }: CameraScreenProps) {
   // Handle continue to photo selection screen
   const handleContinueToSelection = () => {
     if (photoSelection.hasPhotos) {
-      // For now, just show a placeholder alert
-      // Later this will navigate to PhotoSelectionScreen
-      Alert.alert(
-        'Photo Selection',
-        `You have ${photoSelection.photoCount} photo${photoSelection.photoCount > 1 ? 's' : ''} selected. Photo management screen coming soon!`,
-        [{ text: 'OK' }]
-      );
+      // Navigate to CreatePost screen with selected photos
+      (navigation as any).navigate('CreatePost', {
+        photos: photoSelection.selectedPhotos,
+      });
     }
   };
 

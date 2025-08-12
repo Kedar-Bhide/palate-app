@@ -325,10 +325,7 @@ export default function CreatePostScreen({ navigation, route }: CreatePostScreen
           {
             text: 'View in Feed',
             onPress: () => {
-              navigation.reset({
-                index: 0,
-                routes: [{ name: 'MainTabs', params: { screen: 'Feed' } }],
-              });
+              navigation.navigate('Main');
             },
           },
           {

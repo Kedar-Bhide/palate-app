@@ -415,26 +415,6 @@ export async function resetPassword(email: string): Promise<DatabaseResponse<boo
   }
 }
 
-/**
- * Update push notification token
- */
-export async function updatePushToken(userId: UUID, pushToken: string): Promise<DatabaseResponse<boolean>> {
-  try {
-    const { error } = await supabase
-      .from('users')
-      .update({ push_token: pushToken, updated_at: new Date().toISOString() })
-      .eq('id', userId);
-
-    if (error) {
-      return { data: false, error: error.message };
-    }
-
-    return { data: true, error: null };
-  } catch (error) {
-    return { data: false, error: (error as Error).message };
-  }
-}
-
 // =============================================================================
 // SESSION MANAGEMENT
 // =============================================================================

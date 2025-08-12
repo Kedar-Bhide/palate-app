@@ -19,6 +19,7 @@ import {
   clearFeedCache,
   diversifyFeed,
   FeedAlgorithm,
+  FeedFilters,
   PaginatedFeed,
 } from '../lib/feedUtils';
 
@@ -31,6 +32,7 @@ export interface FeedState {
   hasMore: boolean;
   error: string | null;
   algorithm: FeedAlgorithm;
+  filters: FeedFilters;
   lastRefreshTime: Date | null;
 }
 
@@ -70,6 +72,7 @@ export const useFeed = (config: Partial<FeedConfig> = {}) => {
     hasMore: true,
     error: null,
     algorithm: finalConfig.algorithm,
+    filters: {},
     lastRefreshTime: null,
   });
 
@@ -476,6 +479,199 @@ export const useFeed = (config: Partial<FeedConfig> = {}) => {
   }, []);
 
   /**
+   * Apply feed filters
+   */
+  const applyFeedFilters = useCallback(async (filters: FeedFilters): Promise<void> => {
+    try {
+      setState(prev => ({ ...prev, filters, loading: true }));
+      
+      const currentUser = await getCurrentUser();
+      if (!currentUser) return;
+
+      // Filter current posts
+      let filteredPosts = await filterPostsByUserPreferences(state.posts, currentUser.id);
+      
+      // Apply additional filters
+      if (filters.cuisines && filters.cuisines.length > 0) {
+        filteredPosts = filteredPosts.filter(post => {
+          let cuisineName = '';
+          if (typeof post.cuisine === 'string') {
+            cuisineName = post.cuisine;
+          } else if (post.cuisine && typeof post.cuisine === 'object') {
+            cuisineName = post.cuisine.name || '';
+          }
+          return cuisineName && filters.cuisines!.includes(cuisineName);
+        });
+      }
+
+      if (filters.diningTypes && filters.diningTypes.length > 0) {
+        filteredPosts = filteredPosts.filter(post =>
+          post.dining_type && filters.diningTypes!.includes(post.dining_type)
+        );
+      }
+
+      if (filters.ratings && filters.ratings.length > 0) {
+        filteredPosts = filteredPosts.filter(post =>
+          post.rating && filters.ratings!.includes(post.rating)
+        );
+      }
+
+      if (filters.timeRange) {
+        filteredPosts = filteredPosts.filter(post => {
+          const postDate = new Date(post.created_at);
+          return postDate >= filters.timeRange!.start && postDate <= filters.timeRange!.end;
+        });
+      }
+
+      setState(prev => ({
+        ...prev,
+        posts: sortPostsByAlgorithm(filteredPosts, state.algorithm),
+        loading: false,
+      }));
+
+    } catch (error) {
+      console.error('Error applying filters:', error);
+      setState(prev => ({ ...prev, loading: false }));
+    }
+  }, [state.posts, state.algorithm]);
+
+  /**
+   * Fetch individual post detail
+   */
+  const fetchPostDetail = useCallback(async (postId: string): Promise<Post> => {
+    try {
+      const { data: post, error } = await supabase
+        .from('posts')
+        .select(`
+          *,
+          user:users(*)
+        `)
+        .eq('id', postId)
+        .single();
+
+      if (error) {
+        throw new Error(`Failed to fetch post: ${error.message}`);
+      }
+
+      if (!post) {
+        throw new Error('Post not found');
+      }
+
+      return post;
+    } catch (error) {
+      console.error('Error fetching post detail:', error);
+      throw error;
+    }
+  }, []);
+
+  /**
+   * Toggle save status for a post
+   */
+  const toggleSave = useCallback(async (postId: string): Promise<void> => {
+    try {
+      const currentUser = await getCurrentUser();
+      if (!currentUser) {
+        throw new Error('User not authenticated');
+      }
+
+      // Check if post is already saved
+      const { data: existingSave, error: checkError } = await supabase
+        .from('saved_posts')
+        .select('id')
+        .eq('user_id', currentUser.id)
+        .eq('post_id', postId)
+        .single();
+
+      if (checkError && checkError.code !== 'PGRST116') {
+        throw checkError;
+      }
+
+      if (existingSave) {
+        // Unsave the post
+        const { error: deleteError } = await supabase
+          .from('saved_posts')
+          .delete()
+          .eq('id', existingSave.id);
+
+        if (deleteError) throw deleteError;
+      } else {
+        // Save the post
+        const { error: insertError } = await supabase
+          .from('saved_posts')
+          .insert({
+            user_id: currentUser.id,
+            post_id: postId,
+          });
+
+        if (insertError) throw insertError;
+      }
+
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    } catch (error) {
+      console.error('Error toggling save:', error);
+      Alert.alert('Error', 'Failed to save/unsave post. Please try again.');
+    }
+  }, []);
+
+  /**
+   * Report a post
+   */
+  const reportPost = useCallback(async (postId: string, reason: string, details?: string): Promise<void> => {
+    try {
+      const currentUser = await getCurrentUser();
+      if (!currentUser) {
+        throw new Error('User not authenticated');
+      }
+
+      // Submit report
+      const { error } = await supabase
+        .from('post_reports')
+        .insert({
+          reporter_id: currentUser.id,
+          post_id: postId,
+          reason,
+          details: details || null,
+          status: 'pending',
+        });
+
+      if (error) throw error;
+
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    } catch (error) {
+      console.error('Error reporting post:', error);
+      throw error;
+    }
+  }, []);
+
+  /**
+   * Track post interaction for analytics
+   */
+  const trackPostInteraction = useCallback(async (postId: string, action: string): Promise<void> => {
+    try {
+      const currentUser = await getCurrentUser();
+      if (!currentUser) return;
+
+      // Track interaction
+      const { error } = await supabase
+        .from('post_interactions')
+        .insert({
+          user_id: currentUser.id,
+          post_id: postId,
+          action,
+          timestamp: new Date().toISOString(),
+        });
+
+      if (error) {
+        console.warn('Failed to track interaction:', error);
+      }
+    } catch (error) {
+      console.warn('Error tracking interaction:', error);
+    }
+  }, []);
+
+  /**
    * Setup realtime subscriptions
    */
   const setupRealtimeSubscription = useCallback((): void => {
@@ -547,8 +743,13 @@ export const useFeed = (config: Partial<FeedConfig> = {}) => {
     likePost,
     unlikePost,
     toggleLike,
+    toggleSave,
     updatePostInFeed,
     changeAlgorithm,
+    applyFeedFilters,
+    fetchPostDetail,
+    reportPost,
+    trackPostInteraction,
     
     // Utilities
     getPostInteraction: (postId: string) => interactions[postId] || { 

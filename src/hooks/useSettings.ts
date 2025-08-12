@@ -4,7 +4,6 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
 import {
   PrivacySettings,
-  NotificationSettings,
   AccountSettings,
   AppPreferences,
   EditProfileFormData,
@@ -13,14 +12,12 @@ import {
 
 interface UseSettingsReturn {
   privacySettings: PrivacySettings | null;
-  notificationSettings: NotificationSettings | null;
   accountSettings: AccountSettings | null;
   appPreferences: AppPreferences | null;
   loading: boolean;
   error: string | null;
   loadSettings: () => Promise<void>;
   updatePrivacySettings: (settings: Partial<PrivacySettings>) => Promise<boolean>;
-  updateNotificationSettings: (settings: Partial<NotificationSettings>) => Promise<boolean>;
   updateAccountSettings: (settings: Partial<AccountSettings>) => Promise<boolean>;
   updateAppPreferences: (preferences: Partial<AppPreferences>) => Promise<boolean>;
   validateUsername: (username: string, currentUsername?: string) => Promise<{ isValid: boolean; error?: string }>;
@@ -42,12 +39,6 @@ const defaultPrivacySettings: PrivacySettings = {
   whoCanSendMessages: 'friends',
 };
 
-const defaultNotificationSettings: NotificationSettings = {
-  pushEnabled: true,
-  emailEnabled: true,
-  friendRequests: 'push',
-  newPosts: 'push',
-  likesAndComments: 'push',
   achievements: 'both',
   weeklySummary: 'email',
   marketing: 'off',
@@ -75,7 +66,6 @@ const defaultAppPreferences: AppPreferences = {
 export const useSettings = (): UseSettingsReturn => {
   const { user } = useAuth();
   const [privacySettings, setPrivacySettings] = useState<PrivacySettings | null>(null);
-  const [notificationSettings, setNotificationSettings] = useState<NotificationSettings | null>(null);
   const [accountSettings, setAccountSettings] = useState<AccountSettings | null>(null);
   const [appPreferences, setAppPreferences] = useState<AppPreferences | null>(null);
   const [loading, setLoading] = useState(false);
@@ -91,7 +81,6 @@ export const useSettings = (): UseSettingsReturn => {
       // Load settings from database and local storage in parallel
       const [
         privacyResult,
-        notificationResult,
         accountResult,
         appPrefsResult,
       ] = await Promise.allSettled([
@@ -102,12 +91,6 @@ export const useSettings = (): UseSettingsReturn => {
           .eq('user_id', user.id)
           .single(),
         
-        // Notification settings from database
-        supabase
-          .from('user_notification_settings')
-          .select('*')
-          .eq('user_id', user.id)
-          .single(),
         
         // Account settings from database
         supabase
@@ -135,27 +118,6 @@ export const useSettings = (): UseSettingsReturn => {
         setPrivacySettings(defaultPrivacySettings);
       }
 
-      // Process notification settings
-      if (notificationResult.status === 'fulfilled' && notificationResult.value.data) {
-        const data = notificationResult.value.data;
-        setNotificationSettings({
-          pushEnabled: data.push_enabled ?? defaultNotificationSettings.pushEnabled,
-          emailEnabled: data.email_enabled ?? defaultNotificationSettings.emailEnabled,
-          friendRequests: data.friend_requests ?? defaultNotificationSettings.friendRequests,
-          newPosts: data.new_posts ?? defaultNotificationSettings.newPosts,
-          likesAndComments: data.likes_and_comments ?? defaultNotificationSettings.likesAndComments,
-          achievements: data.achievements ?? defaultNotificationSettings.achievements,
-          weeklySummary: data.weekly_summary ?? defaultNotificationSettings.weeklySummary,
-          marketing: data.marketing ?? defaultNotificationSettings.marketing,
-          doNotDisturb: {
-            enabled: data.do_not_disturb_enabled ?? defaultNotificationSettings.doNotDisturb.enabled,
-            startTime: data.do_not_disturb_start ?? defaultNotificationSettings.doNotDisturb.startTime,
-            endTime: data.do_not_disturb_end ?? defaultNotificationSettings.doNotDisturb.endTime,
-          },
-        });
-      } else {
-        setNotificationSettings(defaultNotificationSettings);
-      }
 
       // Process account settings
       if (accountResult.status === 'fulfilled' && accountResult.value.data) {
@@ -226,40 +188,6 @@ export const useSettings = (): UseSettingsReturn => {
     }
   }, [user?.id, privacySettings]);
 
-  const updateNotificationSettings = useCallback(async (newSettings: Partial<NotificationSettings>): Promise<boolean> => {
-    if (!user?.id || !notificationSettings) return false;
-
-    try {
-      const updatedSettings = { ...notificationSettings, ...newSettings };
-
-      const { error } = await supabase
-        .from('user_notification_settings')
-        .upsert({
-          user_id: user.id,
-          push_enabled: updatedSettings.pushEnabled,
-          email_enabled: updatedSettings.emailEnabled,
-          friend_requests: updatedSettings.friendRequests,
-          new_posts: updatedSettings.newPosts,
-          likes_and_comments: updatedSettings.likesAndComments,
-          achievements: updatedSettings.achievements,
-          weekly_summary: updatedSettings.weeklySummary,
-          marketing: updatedSettings.marketing,
-          do_not_disturb_enabled: updatedSettings.doNotDisturb.enabled,
-          do_not_disturb_start: updatedSettings.doNotDisturb.startTime,
-          do_not_disturb_end: updatedSettings.doNotDisturb.endTime,
-          updated_at: new Date().toISOString(),
-        });
-
-      if (error) throw error;
-
-      setNotificationSettings(updatedSettings);
-      return true;
-    } catch (err) {
-      console.error('Error updating notification settings:', err);
-      setError(err instanceof Error ? err.message : 'Failed to update notification settings');
-      return false;
-    }
-  }, [user?.id, notificationSettings]);
 
   const updateAccountSettings = useCallback(async (newSettings: Partial<AccountSettings>): Promise<boolean> => {
     if (!user?.id || !accountSettings) return false;
@@ -453,14 +381,12 @@ export const useSettings = (): UseSettingsReturn => {
 
   return {
     privacySettings,
-    notificationSettings,
     accountSettings,
     appPreferences,
     loading,
     error,
     loadSettings,
     updatePrivacySettings,
-    updateNotificationSettings,
     updateAccountSettings,
     updateAppPreferences,
     validateUsername,

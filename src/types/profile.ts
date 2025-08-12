@@ -60,21 +60,6 @@ export interface ProfilePhotoUpload {
   fileName: string;
 }
 
-export interface NotificationSettings {
-  pushEnabled: boolean;
-  emailEnabled: boolean;
-  friendRequests: 'push' | 'email' | 'both' | 'off';
-  newPosts: 'push' | 'email' | 'both' | 'off';
-  likesAndComments: 'push' | 'email' | 'both' | 'off';
-  achievements: 'push' | 'email' | 'both' | 'off';
-  weeklySummary: 'email' | 'off';
-  marketing: 'email' | 'off';
-  doNotDisturb: {
-    enabled: boolean;
-    startTime: string; // HH:mm format
-    endTime: string; // HH:mm format
-  };
-}
 
 export interface AccountSettings {
   twoFactorEnabled: boolean;

@@ -8,13 +8,19 @@ import { theme } from '../theme';
 import uiTheme, { bottomNavHeight, spacing, colors, fonts } from '../theme/uiTheme';
 import { useFeed } from '../hooks/useFeed';
 import PostsList from '../components/posts/PostsList';
-import { FeedAlgorithm } from '../lib/feedUtils';
+import FeedFilter from '../components/feed/FeedFilter';
+import EmptyFeedState from '../components/feed/EmptyFeedState';
+import { FeedAlgorithm, FeedFilters } from '../lib/feedUtils';
+import { createTestPost, createSamplePosts } from '../lib/sampleData';
+import { getCurrentUser } from '../lib/supabase';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const [algorithm, setAlgorithm] = useState<FeedAlgorithm>('recent');
+  const [filters, setFilters] = useState<FeedFilters>({});
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
 
   // Feed hook
   const feed = useFeed({ 
@@ -30,24 +36,54 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     feed.changeAlgorithm(newAlgorithm);
   }, [feed]);
 
+  // Handle filters change
+  const handleFiltersChange = useCallback(async (newFilters: FeedFilters) => {
+    setFilters(newFilters);
+    await feed.applyFeedFilters(newFilters);
+  }, [feed]);
+
+  // Handle filter modal
+  const handleFilterPress = useCallback(() => {
+    setFilterModalVisible(true);
+  }, []);
+
+  const handleFilterClose = useCallback(() => {
+    setFilterModalVisible(false);
+  }, []);
+
+  const handleFilterReset = useCallback(async () => {
+    const resetFilters = {};
+    setFilters(resetFilters);
+    setAlgorithm('recent');
+    await feed.applyFeedFilters(resetFilters);
+    feed.changeAlgorithm('recent');
+    setFilterModalVisible(false);
+  }, [feed]);
+
   // Handle user press
   const handleUserPress = useCallback((userId: string) => {
     console.log('User pressed:', userId);
-    // TODO: Navigate to user profile when stack navigator is set up
-    // navigation.navigate('UserProfile', { userId });
-  }, []);
+    (navigation as any).navigate('UserProfile', { userId });
+  }, [navigation]);
+
+  // Handle post press (navigate to detail)
+  const handlePostPress = useCallback((postId: string) => {
+    console.log('Navigate to post detail:', postId);
+    (navigation as any).navigate('PostDetail', { postId, fromScreen: 'feed' });
+  }, [navigation]);
 
   // Handle comment press
   const handleCommentPress = useCallback((postId: string) => {
     console.log('Comment pressed for post:', postId);
-    // navigation.navigate('PostDetail', { postId });
-  }, []);
+    // For now, navigate to post detail where comments will be
+    handlePostPress(postId);
+  }, [handlePostPress]);
 
   // Handle share press
   const handleSharePress = useCallback((postId: string) => {
     console.log('Share pressed for post:', postId);
-    // Implement share functionality
-  }, []);
+    feed.trackPostInteraction(postId, 'share');
+  }, [feed]);
 
   // Handle search
   const handleSearch = useCallback(() => {
@@ -55,11 +91,38 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     // navigation.navigate('Search');
   }, []);
 
-  // Handle notifications
-  const handleNotifications = useCallback(() => {
-    console.log('Notifications pressed');
-    // navigation.navigate('Notifications');
-  }, []);
+  // Handle create test data
+  const handleCreateTestData = useCallback(async () => {
+    try {
+      const user = await getCurrentUser();
+      if (!user) return;
+      
+      const success = await createTestPost(user.id);
+      if (success) {
+        console.log('Test post created, refreshing feed...');
+        await feed.refreshFeed();
+      }
+    } catch (error) {
+      console.error('Error creating test data:', error);
+    }
+  }, [feed]);
+
+  // Handle create sample posts
+  const handleCreateSamplePosts = useCallback(async () => {
+    try {
+      const user = await getCurrentUser();
+      if (!user) return;
+      
+      const success = await createSamplePosts(user.id);
+      if (success) {
+        console.log('Sample posts created, refreshing feed...');
+        await feed.refreshFeed();
+      }
+    } catch (error) {
+      console.error('Error creating sample posts:', error);
+    }
+  }, [feed]);
+
 
   // Handle quick post
   const handleQuickPost = useCallback(() => {
@@ -115,6 +178,28 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       <View style={[styles.header, { paddingTop: insets.top }]}>
         <Text style={styles.headerTitle}>Palate</Text>
         <View style={styles.headerActions}>
+          {/* Test Data Button (for development) */}
+          {__DEV__ && (
+            <TouchableOpacity
+              onPress={handleCreateTestData}
+              style={[styles.headerButton, { backgroundColor: colors.success }]}
+              accessibilityRole="button"
+              accessibilityLabel="Create test post"
+            >
+              <MaterialIcons name="add" size={20} color={colors.white} />
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            onPress={handleFilterPress}
+            style={[styles.headerButton, styles.filterButton]}
+            accessibilityRole="button"
+            accessibilityLabel="Filter posts"
+          >
+            <MaterialIcons name="tune" size={24} color={theme.colors.text} />
+            {(filters.cuisines?.length || filters.diningTypes?.length || filters.ratings?.length || algorithm !== 'recent') && (
+              <View style={styles.filterBadge} />
+            )}
+          </TouchableOpacity>
           <TouchableOpacity
             onPress={handleSearch}
             style={styles.headerButton}
@@ -122,17 +207,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             accessibilityLabel="Search"
           >
             <MaterialIcons name="search" size={24} color={theme.colors.text} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={handleNotifications}
-            style={styles.headerButton}
-            accessibilityRole="button"
-            accessibilityLabel="Notifications"
-          >
-            <MaterialIcons name="notifications-none" size={24} color={theme.colors.text} />
-            <View style={styles.notificationBadge}>
-              <Text style={styles.badgeText}>3</Text>
-            </View>
           </TouchableOpacity>
         </View>
       </View>
@@ -152,8 +226,40 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         onComment={handleCommentPress}
         onShare={handleSharePress}
         onUserPress={handleUserPress}
+        onPostPress={handlePostPress}
         ListHeaderComponent={renderHeader}
-        contentContainerStyle={styles.feedContentContainer}
+        ListEmptyComponent={
+          !feed.loading && feed.posts.length === 0 ? (
+            <EmptyFeedState
+              type={feed.error ? 'error' : 'new-user'}
+              onActionPress={() => {
+                if (feed.error) {
+                  feed.refreshFeed();
+                } else {
+                  console.log('Find friends pressed');
+                }
+              }}
+              onSecondaryActionPress={() => {
+                handleQuickPost();
+              }}
+            />
+          ) : null
+        }
+        contentContainerStyle={[
+          styles.feedContentContainer,
+          feed.posts.length === 0 && styles.emptyFeedContainer,
+        ]}
+      />
+
+      {/* Feed Filter Modal */}
+      <FeedFilter
+        visible={filterModalVisible}
+        activeFilters={filters}
+        currentAlgorithm={algorithm}
+        onFiltersChange={handleFiltersChange}
+        onAlgorithmChange={handleAlgorithmChange}
+        onClose={handleFilterClose}
+        onReset={handleFilterReset}
       />
 
       {/* Floating Action Button */}
@@ -216,25 +322,6 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
 
-  notificationBadge: {
-    position: 'absolute',
-    top: -2,
-    right: -2,
-    backgroundColor: colors.error,
-    borderRadius: 10,
-    minWidth: 18,
-    height: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: colors.white,
-  },
-
-  badgeText: {
-    color: colors.white,
-    fontSize: fonts.xs,
-    fontWeight: fonts.weights.bold,
-  },
 
   // Algorithm Section
   algorithmSection: {
@@ -279,6 +366,24 @@ const styles = StyleSheet.create({
   // Feed
   feedContentContainer: {
     paddingBottom: bottomNavHeight + spacing(4),
+  },
+
+  emptyFeedContainer: {
+    flexGrow: 1,
+  },
+
+  filterButton: {
+    position: 'relative',
+  },
+
+  filterBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.secondary,
   },
 
   // FAB

@@ -4,84 +4,67 @@
  */
 
 import { supabase } from './supabase';
-import { PostInsert } from './database.types';
 
 export const createSamplePosts = async (userId: string): Promise<boolean> => {
   try {
     console.log('🍽️ Creating sample posts for first-time experience...');
 
-    // First, check if we have cuisines in the database
-    const { data: cuisines, error: cuisineError } = await supabase
-      .from('cuisines')
-      .select('id, name')
-      .limit(10);
-
-    if (cuisineError) {
-      console.error('Error fetching cuisines:', cuisineError);
-      return false;
-    }
-
-    if (!cuisines || cuisines.length === 0) {
-      console.warn('No cuisines found in database. Please run the SQL setup first.');
-      return false;
-    }
-
-    // Sample posts data
-    const samplePosts: PostInsert[] = [
+    // Sample posts data using current schema
+    const samplePosts = [
       {
         user_id: userId,
         restaurant_name: "Mama's Kitchen",
-        cuisine_id: cuisines.find(c => c.name === 'Italian')?.id || cuisines[0]?.id,
+        cuisine: 'Italian',
         rating: 5,
-        review_text: "Amazing homemade pasta! The carbonara was creamy perfection. This cozy little place feels like eating at your Italian grandmother's house.",
-        location_name: "Downtown",
+        review: "Amazing homemade pasta! The carbonara was creamy perfection. This cozy little place feels like eating at your Italian grandmother's house.",
         dining_type: 'casual',
-        image_urls: [],
-        is_private: false
+        photo_urls: ['https://images.unsplash.com/photo-1551183053-bf91a1d81141?w=400'],
+        is_private: false,
+        created_at: new Date().toISOString(),
       },
       {
         user_id: userId,
         restaurant_name: "Tokyo Nights",
-        cuisine_id: cuisines.find(c => c.name === 'Japanese')?.id || cuisines[1]?.id || cuisines[0]?.id,
+        cuisine: 'Japanese',
         rating: 4,
-        review_text: "Fresh sushi and great atmosphere. The salmon nigiri melted in my mouth. Definitely coming back to try more items from their extensive menu.",
-        location_name: "Uptown District",
+        review: "Fresh sushi and great atmosphere. The salmon nigiri melted in my mouth. Definitely coming back to try more items from their extensive menu.",
         dining_type: 'fine_dining',
-        image_urls: [],
-        is_private: false
+        photo_urls: ['https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?w=400'],
+        is_private: false,
+        created_at: new Date().toISOString(),
       },
       {
         user_id: userId,
         restaurant_name: "Spice Garden",
-        cuisine_id: cuisines.find(c => c.name === 'Indian')?.id || cuisines[2]?.id || cuisines[0]?.id,
+        cuisine: 'Indian',
         rating: 5,
-        review_text: "Incredible flavors! The butter chicken was rich and creamy, and the naan bread was perfectly fluffy. Great vegetarian options too.",
-        location_name: "India Town",
+        review: "Incredible flavors! The butter chicken was rich and creamy, and the naan bread was perfectly fluffy. Great vegetarian options too.",
         dining_type: 'casual',
-        image_urls: [],
-        is_private: false
+        photo_urls: ['https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400'],
+        is_private: false,
+        created_at: new Date().toISOString(),
       },
       {
         user_id: userId,
         restaurant_name: "Le Petit Bistro",
-        cuisine_id: cuisines.find(c => c.name === 'French')?.id || cuisines[3]?.id || cuisines[0]?.id,
+        cuisine: 'French',
         rating: 4,
-        review_text: "Authentic French cuisine with a modern twist. The coq au vin was tender and flavorful. A bit pricey but worth it for special occasions.",
-        location_name: "Arts District",
+        review: "Authentic French cuisine with a modern twist. The coq au vin was tender and flavorful. A bit pricey but worth it for special occasions.",
         dining_type: 'fine_dining',
-        image_urls: [],
-        is_private: false
+        photo_urls: ['https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400'],
+        is_private: false,
+        created_at: new Date().toISOString(),
       },
       {
         user_id: userId,
         restaurant_name: "Street Tacos Maya",
-        cuisine_id: cuisines.find(c => c.name === 'Mexican')?.id || cuisines[4]?.id || cuisines[0]?.id,
+        cuisine: 'Mexican',
         rating: 5,
-        review_text: "Best tacos in the city! Al pastor was perfectly seasoned and the homemade tortillas were incredible. Great prices and generous portions.",
-        location_name: "Food Truck Plaza",
+        review: "Best tacos in the city! Al pastor was perfectly seasoned and the homemade tortillas were incredible. Great prices and generous portions.",
         dining_type: 'street_food',
-        image_urls: [],
-        is_private: false
+        photo_urls: ['https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400'],
+        is_private: false,
+        created_at: new Date().toISOString(),
       }
     ];
 
@@ -98,6 +81,18 @@ export const createSamplePosts = async (userId: string): Promise<boolean> => {
 
     console.log(`✅ Created ${insertedPosts?.length || 0} sample posts successfully`);
     
+    // Also create some sample likes and interactions
+    if (insertedPosts && insertedPosts.length > 0) {
+      // Add some likes to make the feed more realistic
+      const likesToAdd = [
+        { user_id: userId, post_id: insertedPosts[0].id },
+        { user_id: userId, post_id: insertedPosts[2].id },
+        { user_id: userId, post_id: insertedPosts[4].id },
+      ];
+      
+      await supabase.from('post_likes').insert(likesToAdd).select();
+    }
+    
     // Trigger a slight delay to ensure database consistency
     await new Promise(resolve => setTimeout(resolve, 1000));
     
@@ -105,6 +100,41 @@ export const createSamplePosts = async (userId: string): Promise<boolean> => {
 
   } catch (error) {
     console.error('Failed to create sample posts:', error);
+    return false;
+  }
+};
+
+export const createTestPost = async (userId: string): Promise<boolean> => {
+  try {
+    console.log('🍽️ Creating test post...');
+
+    const testPost = {
+      user_id: userId,
+      restaurant_name: "Test Restaurant",
+      cuisine: 'American',
+      rating: 4,
+      review: "This is a test post to verify the posting system works correctly!",
+      dining_type: 'casual',
+      photo_urls: ['https://images.unsplash.com/photo-1466978913421-dad2ebd01d17?w=400'],
+      is_private: false,
+      created_at: new Date().toISOString(),
+    };
+
+    const { data: insertedPost, error: postError } = await supabase
+      .from('posts')
+      .insert(testPost)
+      .select()
+      .single();
+
+    if (postError) {
+      console.error('Error creating test post:', postError);
+      return false;
+    }
+
+    console.log('✅ Test post created successfully:', insertedPost.id);
+    return true;
+  } catch (error) {
+    console.error('Error creating test post:', error);
     return false;
   }
 };

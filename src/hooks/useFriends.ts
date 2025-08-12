@@ -11,7 +11,6 @@ import {
   SearchHistory,
   FriendActivity,
   FriendStats,
-  NotificationPreferences,
   FriendListItem,
   MutualFriend
 } from '../types/friends';
@@ -24,7 +23,6 @@ import {
   calculateRelevanceScore,
   debounce
 } from '../lib/friendsUtils';
-import { useNotificationTriggers } from './useNotificationTriggers';
 
 export function useFriends() {
   const [friends, setFriends] = useState<User[]>([]);
@@ -37,17 +35,11 @@ export function useFriends() {
   const [suggestedUsers, setSuggestedUsers] = useState<FriendSuggestion[]>([]);
   const [friendActivities, setFriendActivities] = useState<FriendActivity[]>([]);
   const [friendStats, setFriendStats] = useState<FriendStats | null>(null);
-  const [notificationPrefs, setNotificationPrefs] = useState<NotificationPreferences | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchLoading, setSearchLoading] = useState(false);
   const [activitiesLoading, setActivitiesLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Notification triggers
-  const {
-    triggerFriendRequestNotification,
-    triggerFriendAcceptedNotification,
-  } = useNotificationTriggers();
 
   // Load initial friend data
   const loadFriendData = useCallback(async () => {
@@ -63,7 +55,6 @@ export function useFriends() {
         loadBlockedUsers(user.id),
         loadSearchHistory(user.id),
         loadFriendStats(user.id),
-        loadNotificationPreferences(user.id)
       ]);
 
       // Load activities after friends are loaded
@@ -279,29 +270,6 @@ export function useFriends() {
     }
   }, [friends.length, friendRequests.length, sentRequests.length, blockedUsers.length]);
 
-  const loadNotificationPreferences = useCallback(async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('user_notification_preferences')
-        .select('*')
-        .eq('user_id', userId)
-        .single();
-
-      if (error && error.code !== 'PGRST116') throw error;
-
-      const prefs: NotificationPreferences = data || {
-        friend_requests: true,
-        friend_accepts: true,
-        friend_posts: true,
-        mentions: true,
-        comments: true,
-      };
-
-      setNotificationPrefs(prefs);
-    } catch (err) {
-      console.error('Error loading notification preferences:', err);
-    }
-  }, []);
 
   const searchUsers = useCallback(async (query: string): Promise<SearchResult[]> => {
     if (!query.trim()) {
@@ -445,14 +413,6 @@ export function useFriends() {
 
       if (error) throw error;
 
-      // Trigger friend request notification
-      try {
-        await triggerFriendRequestNotification(user.id, userId);
-        console.log('Friend request notification sent');
-      } catch (notifError) {
-        console.error('Failed to send friend request notification:', notifError);
-        // Don't fail the entire operation if notification fails
-      }
 
       // Update local state
       await loadSentRequests(user.id);
@@ -468,7 +428,7 @@ export function useFriends() {
       console.error('Error sending friend request:', err);
       throw err;
     }
-  }, [loadSentRequests, triggerFriendRequestNotification]);
+  }, [loadSentRequests]);
 
   const acceptFriendRequest = useCallback(async (requestId: string): Promise<void> => {
     try {
@@ -486,14 +446,6 @@ export function useFriends() {
 
       if (error) throw error;
 
-      // Trigger friend accepted notification to the original requester
-      try {
-        await triggerFriendAcceptedNotification(user.id, friendRequest.requester_id);
-        console.log('Friend accepted notification sent');
-      } catch (notifError) {
-        console.error('Failed to send friend accepted notification:', notifError);
-        // Don't fail the entire operation if notification fails
-      }
 
       // Refresh friend data
       await Promise.all([
@@ -505,7 +457,7 @@ export function useFriends() {
       console.error('Error accepting friend request:', err);
       throw err;
     }
-  }, [loadFriends, loadFriendRequests, friendRequests, triggerFriendAcceptedNotification]);
+  }, [loadFriends, loadFriendRequests, friendRequests]);
 
   const declineFriendRequest = useCallback(async (requestId: string): Promise<void> => {
     try {
@@ -816,7 +768,6 @@ export function useFriends() {
     suggestedUsers,
     friendActivities,
     friendStats,
-    notificationPrefs,
     
     // State
     loading,
@@ -841,25 +792,6 @@ export function useFriends() {
     // Advanced Features
     refreshActivities: () => loadFriendActivities(getCurrentUser()?.id || ''),
     refreshStats: () => loadFriendStats(getCurrentUser()?.id || ''),
-    updateNotificationPreferences: async (prefs: Partial<NotificationPreferences>) => {
-      try {
-        const user = await getCurrentUser();
-        if (!user) throw new Error('Not authenticated');
-        
-        const { error } = await supabase
-          .from('user_notification_preferences')
-          .upsert({
-            user_id: user.id,
-            ...prefs
-          });
-        
-        if (error) throw error;
-        await loadNotificationPreferences(user.id);
-      } catch (err) {
-        console.error('Error updating notification preferences:', err);
-        throw err;
-      }
-    },
     
     // Bulk Operations
     bulkRemoveFriends,

@@ -11,7 +11,6 @@ import {
   detectNewAchievements,
   getProgressGoals
 } from '../lib/cuisineUtils';
-import { useNotificationTriggers } from './useNotificationTriggers';
 
 export function useCuisineProgress() {
   const [cuisines, setCuisines] = useState<Cuisine[]>([]);
@@ -29,12 +28,6 @@ export function useCuisineProgress() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Notification triggers
-  const {
-    triggerCuisineNotification,
-    triggerAchievementNotification,
-    scheduleWeeklyProgressNotifications,
-  } = useNotificationTriggers();
 
   const loadCuisines = useCallback(async () => {
     try {
@@ -166,14 +159,6 @@ export function useCuisineProgress() {
         const newProgress = [...userProgress, data];
         setUserProgress(newProgress);
 
-        // Trigger cuisine notification to friends
-        try {
-          await triggerCuisineNotification(cuisineId, user.id);
-          console.log('Cuisine notification sent to friends');
-        } catch (notifError) {
-          console.error('Failed to send cuisine notification:', notifError);
-          // Don't fail the entire operation if notification fails
-        }
 
         // Check for new achievements
         const oldTriedCount = userProgress.length;
@@ -182,17 +167,6 @@ export function useCuisineProgress() {
         
         if (newAchievements.length > 0) {
           setAchievements(prev => [...prev, ...newAchievements]);
-          
-          // Trigger achievement notifications
-          for (const achievement of newAchievements) {
-            try {
-              await triggerAchievementNotification(achievement.id, user.id);
-              console.log('Achievement notification sent:', achievement.name);
-            } catch (notifError) {
-              console.error('Failed to send achievement notification:', notifError);
-              // Don't fail the entire operation if notification fails
-            }
-          }
         }
 
         // Update stats
@@ -261,29 +235,12 @@ export function useCuisineProgress() {
     loadCuisineProgress();
   }, [loadCuisineProgress]);
 
-  /**
-   * Schedule weekly progress notifications for current user
-   */
-  const scheduleWeeklyProgress = useCallback(async () => {
-    try {
-      await scheduleWeeklyProgressNotifications();
-      console.log('Weekly progress notifications scheduled');
-    } catch (error) {
-      console.error('Failed to schedule weekly progress notifications:', error);
-    }
-  }, [scheduleWeeklyProgressNotifications]);
 
   // Initial load
   useEffect(() => {
     loadCuisineProgress();
   }, [loadCuisineProgress]);
 
-  // Schedule weekly progress notifications on first load
-  useEffect(() => {
-    if (!loading && userProgress.length > 0) {
-      scheduleWeeklyProgress();
-    }
-  }, [loading, userProgress.length, scheduleWeeklyProgress]);
 
   return {
     cuisines,
@@ -299,6 +256,5 @@ export function useCuisineProgress() {
     checkForNewAchievements,
     updateFavoriteRestaurant,
     refreshData,
-    scheduleWeeklyProgress,
   };
 }

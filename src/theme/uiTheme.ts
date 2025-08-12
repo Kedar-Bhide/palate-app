@@ -12,7 +12,9 @@ export const colors = {
   primary: '#3B82F6',
   primaryLight: '#93C5FD',
   primaryDark: '#1E40AF',
+  primaryContainer: '#EBF4FF',
   secondary: '#FF6B35',
+  accent: '#8B5CF6',
   background: '#FFFFFF',
   surface: '#FEFEFE',
   surfaceVariant: '#F8FAFC',
@@ -20,12 +22,15 @@ export const colors = {
   textSecondary: '#64748B',
   textMuted: '#94A3B8',
   outline: '#F1F5F9',
+  border: '#E2E8F0',
   white: '#FFFFFF',
   black: '#000000',
+  shadow: '#000000',
   overlay: 'rgba(0, 0, 0, 0.3)',
   success: '#10B981',
   error: '#EF4444',
   warning: '#F59E0B',
+  info: '#3B82F6',
 };
 
 // Spacing helper function - 8px base unit
@@ -33,9 +38,13 @@ export const spacing = (multiplier: number): number => multiplier * 8;
 
 // Border radii for consistent rounded corners
 export const radii = {
+  xs: 4,
+  sm: 6,
   card: 12,
   button: 8,
   input: 10,
+  lg: 16,
+  xl: 20,
   full: 9999,
 };
 
@@ -92,6 +101,17 @@ export const shadows = {
     },
     android: {
       elevation: 6,
+    },
+  }),
+  large: Platform.select({
+    ios: {
+      shadowColor: colors.black,
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.2,
+      shadowRadius: 16,
+    },
+    android: {
+      elevation: 12,
     },
   }),
 };

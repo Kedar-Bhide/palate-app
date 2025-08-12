@@ -61,13 +61,13 @@ export default function AchievementBadge({
           Animated.timing(glowAnim, {
             toValue: 1,
             duration: 1500,
-            easing: Easing.inOut(Easing.sine),
+            easing: Easing.inOut(Easing.sin),
             useNativeDriver: false,
           }),
           Animated.timing(glowAnim, {
             toValue: 0,
             duration: 1500,
-            easing: Easing.inOut(Easing.sine),
+            easing: Easing.inOut(Easing.sin),
             useNativeDriver: false,
           }),
         ])
