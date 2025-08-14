@@ -5,6 +5,8 @@ export interface Cuisine {
   emoji: string;
   description?: string;
   origin_country?: string;
+  created_at: string;
+  updated_at?: string;
 }
 
 export interface UserCuisineProgress {
@@ -14,7 +16,12 @@ export interface UserCuisineProgress {
   first_tried_at: string;
   times_tried: number;
   favorite_restaurant?: string;
-  cuisine?: Cuisine;
+  notes?: string;
+  rating?: number; // 1-5 scale for how much they like this cuisine
+  created_at: string;
+  updated_at?: string;
+  photos?: string[]; // Array of photo URLs for social sharing achievements
+  cuisine?: Cuisine; // Populated when joined with cuisines table
 }
 
 export interface ProgressStats {
@@ -27,6 +34,16 @@ export interface ProgressStats {
   nextGoal: { goal: number; remaining: number };
 }
 
+export type AchievementType = 
+  | 'milestone' 
+  | 'cuisine_count' 
+  | 'country_diversity' 
+  | 'category_diversity' 
+  | 'category_specialist' 
+  | 'streak' 
+  | 'social_sharing' 
+  | 'speed_challenge';
+
 export interface Achievement {
   id: string;
   name: string;
@@ -35,9 +52,12 @@ export interface Achievement {
   threshold: number;
   unlockedAt?: string;
   tier?: 'bronze' | 'silver' | 'gold' | 'platinum';
-  category: 'exploration' | 'diversity' | 'social' | 'streak' | 'specialist';
+  category: 'exploration' | 'diversity' | 'social' | 'streak' | 'specialist' | 'challenge';
+  type?: AchievementType;
   tips?: string[];
   rarity?: 'common' | 'rare' | 'epic' | 'legendary';
+  points?: number;
+  metadata?: Record<string, any>;
 }
 
 export interface CuisineFilter {
@@ -100,8 +120,36 @@ export interface CuisineSuggestion {
 }
 
 export interface AchievementProgress {
-  achievementId: string;
-  progress: number;
-  total: number;
+  progress: number;      // 0-1 completion ratio
   isUnlocked: boolean;
+  current: number;       // Current progress value
+  target: number;        // Target threshold
+}
+
+// Component Props Interfaces
+export interface CuisineCardProps {
+  cuisine: Cuisine;
+  userProgress?: UserCuisineProgress;
+  onPress: (cuisine: Cuisine) => void;
+  size?: 'small' | 'medium' | 'large';
+  showProgress?: boolean;
+  disabled?: boolean;
+}
+
+export interface ProgressStatsProps {
+  totalCuisines: number;
+  triedCuisines: number;
+  userProgress: UserCuisineProgress[];
+  onStatsPress?: () => void;
+  compact?: boolean;
+}
+
+// Utility type for cuisine with progress information
+export interface CuisineWithProgress extends Cuisine {
+  userProgress?: UserCuisineProgress;
+  isTried: boolean;
+  timesTried: number;
+  lastTriedAt?: string;
+  favoriteRestaurant?: string;
+  userRating?: number;
 }

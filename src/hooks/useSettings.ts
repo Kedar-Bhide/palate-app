@@ -39,6 +39,7 @@ const defaultPrivacySettings: PrivacySettings = {
   whoCanSendMessages: 'friends',
 };
 
+const defaultNotificationSettings: NotificationSettings = {
   achievements: 'both',
   weeklySummary: 'email',
   marketing: 'off',

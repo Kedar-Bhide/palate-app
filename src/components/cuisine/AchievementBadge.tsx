@@ -7,17 +7,24 @@ import {
   Animated,
   Easing,
 } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
+import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
+import * as Haptics from 'expo-haptics';
 import { Achievement } from '../../types/cuisine';
 import { colors, spacing, radii, fonts, shadows } from '../../theme/uiTheme';
 
-interface AchievementBadgeProps {
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+
+export interface AchievementBadgeProps {
   achievement: Achievement;
   isUnlocked: boolean;
-  progress?: number;
+  progress?: number; // 0-1 for partial completion
   onPress: () => void;
   showProgress?: boolean;
   size?: 'small' | 'medium' | 'large';
   showCelebration?: boolean;
+  animated?: boolean;
+  tier?: 'bronze' | 'silver' | 'gold' | 'platinum';
 }
 
 export default function AchievementBadge({
@@ -28,6 +35,8 @@ export default function AchievementBadge({
   showProgress = true,
   size = 'medium',
   showCelebration = false,
+  animated = true,
+  tier,
 }: AchievementBadgeProps) {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const rotateAnim = useRef(new Animated.Value(0)).current;
@@ -35,8 +44,10 @@ export default function AchievementBadge({
   const celebrationAnim = useRef(new Animated.Value(0)).current;
 
   const badgeSize = getBadgeSize(size);
-  const tierColors = getTierColors(achievement.tier);
-  const progressPercentage = Math.min((progress / achievement.threshold) * 100, 100);
+  const badgeTier = tier || achievement.tier || determineTier(achievement.threshold);
+  const tierColors = getTierColors(badgeTier);
+  const progressPercentage = achievement.threshold > 0 ? Math.min((progress / achievement.threshold) * 100, 100) : progress * 100;
+  const isLocked = !isUnlocked && progress < 1;
 
   useEffect(() => {
     if (showCelebration && isUnlocked) {
@@ -306,6 +317,13 @@ function getRaritySymbol(rarity: 'common' | 'rare' | 'epic' | 'legendary'): stri
   }
 }
 
+function determineTier(threshold: number): 'bronze' | 'silver' | 'gold' | 'platinum' {
+  if (threshold >= 100) return 'platinum';
+  if (threshold >= 50) return 'gold';
+  if (threshold >= 10) return 'silver';
+  return 'bronze';
+}
+
 const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
@@ -377,6 +395,21 @@ const styles = StyleSheet.create({
     fontWeight: fonts.weights.medium,
     color: colors.textSecondary,
     marginTop: spacing(0.25),
+  },
+
+  tierIndicator: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: colors.white,
+    zIndex: 3,
+    ...shadows.small,
   },
 
   rarityIndicator: {

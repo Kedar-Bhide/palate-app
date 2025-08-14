@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase, getCurrentUser } from '../lib/supabase';
 import {
   Cuisine,
@@ -6,11 +6,27 @@ import {
   ProgressStats,
   Achievement
 } from '../types/cuisine';
+import { useAchievements } from './useAchievements';
 import {
   calculateProgress,
   detectNewAchievements,
-  getProgressGoals
+  detectEnhancedAchievements,
+  getProgressGoals,
+  calculateEnhancedDiversityScore,
+  getEnhancedCuisineStreak,
+  getEnhancedMonthlyProgress,
+  predictNextCuisines,
 } from '../lib/cuisineUtils';
+import {
+  fetchAllCuisines,
+  fetchUserProgress,
+  createCuisineProgress,
+  updateCuisineProgress,
+  incrementTimesTried,
+  getCuisineStatistics,
+  validateProgressData,
+  sanitizeProgressInput,
+} from '../lib/cuisineDatabase';
 
 export function useCuisineProgress() {
   const [cuisines, setCuisines] = useState<Cuisine[]>([]);
@@ -24,21 +40,32 @@ export function useCuisineProgress() {
     monthlyProgress: 0,
     nextGoal: { goal: 5, remaining: 5 }
   });
-  const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [celebrationQueue, setCelebrationQueue] = useState<Achievement[]>([]);
+  const [isCheckingAchievements, setIsCheckingAchievements] = useState(false);
+  
+  // Achievement system integration
+  const {
+    achievements,
+    checkAchievements,
+    unlockAchievement,
+    getNextAchievements,
+    recentlyUnlocked,
+    clearRecentlyUnlocked,
+  } = useAchievements();
 
 
   const loadCuisines = useCallback(async () => {
     try {
-      const { data, error } = await supabase
-        .from('cuisines')
-        .select('*')
-        .order('name');
-
-      if (error) throw error;
-      setCuisines(data || []);
-      return data || [];
+      const response = await fetchAllCuisines({ orderBy: 'name', ascending: true });
+      
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      
+      setCuisines(response.data || []);
+      return response.data || [];
     } catch (err) {
       console.error('Error loading cuisines:', err);
       setError(err instanceof Error ? err.message : 'Failed to load cuisines');
@@ -54,18 +81,16 @@ export function useCuisineProgress() {
         return [];
       }
 
-      const { data, error } = await supabase
-        .from('user_cuisine_progress')
-        .select(`
-          *,
-          cuisine:cuisines(*)
-        `)
-        .eq('user_id', user.id)
-        .order('first_tried_at', { ascending: false });
-
-      if (error) throw error;
+      const response = await fetchUserProgress(user.id, {
+        orderBy: 'first_tried_at',
+        ascending: false
+      });
       
-      const progressData = data || [];
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      
+      const progressData = response.data || [];
       setUserProgress(progressData);
       return progressData;
     } catch (err) {
@@ -85,21 +110,26 @@ export function useCuisineProgress() {
         loadUserProgress()
       ]);
 
-      const newStats = calculateProgress(progressData, cuisinesData);
-      setStats(newStats);
+      // Calculate enhanced progress stats
+      const enhancedStats = {
+        totalCuisines: cuisinesData.length,
+        triedCuisines: progressData.length,
+        percentage: cuisinesData.length > 0 ? Math.round((progressData.length / cuisinesData.length) * 100) : 0,
+        diversityScore: calculateEnhancedDiversityScore(progressData, cuisinesData),
+        currentStreak: getEnhancedCuisineStreak(progressData),
+        monthlyProgress: getEnhancedMonthlyProgress(progressData).thisMonth,
+        nextGoal: getNextGoal(progressData.length)
+      };
+      setStats(enhancedStats);
 
-      // Load achievements
-      const goals = getProgressGoals(newStats.triedCuisines);
-      const unlockedAchievements = goals
-        .filter(goal => goal.achieved)
-        .map(goal => ({
-          id: `cuisine_${goal.threshold}`,
-          name: goal.name,
-          description: goal.description,
-          icon: goal.icon,
-          threshold: goal.threshold
-        }));
-      setAchievements(unlockedAchievements);
+      // Check for newly unlocked achievements
+      const newlyUnlocked = checkAchievements(progressData, cuisinesData);
+      if (newlyUnlocked.length > 0) {
+        newlyUnlocked.forEach(achievement => {
+          unlockAchievement(achievement.id);
+        });
+        setCelebrationQueue(prev => [...prev, ...newlyUnlocked]);
+      }
 
     } catch (err) {
       console.error('Error loading cuisine progress:', err);
@@ -109,69 +139,88 @@ export function useCuisineProgress() {
     }
   }, [loadCuisines, loadUserProgress]);
 
-  const markCuisineTried = useCallback(async (cuisineId: number, restaurantName: string) => {
+  const markCuisineTried = useCallback(async (cuisineId: number, restaurantName: string, notes?: string, rating?: number) => {
     try {
       const user = await getCurrentUser();
       if (!user) {
         throw new Error('User not authenticated');
       }
 
+      // Validate and sanitize input
+      const sanitizedData = sanitizeProgressInput({
+        favorite_restaurant: restaurantName,
+        notes,
+        rating
+      });
+      
+      const validation = validateProgressData({
+        user_id: user.id,
+        cuisine_id: cuisineId,
+        ...sanitizedData
+      });
+      
+      if (!validation.isValid) {
+        throw new Error(`Validation failed: ${validation.errors.join(', ')}`);
+      }
+
       // Check if already tried
       const existingProgress = userProgress.find(p => p.cuisine_id === cuisineId);
+      
       if (existingProgress) {
-        // Update existing progress
-        const { error } = await supabase
-          .from('user_cuisine_progress')
-          .update({
-            times_tried: existingProgress.times_tried + 1,
-            favorite_restaurant: restaurantName
-          })
-          .eq('id', existingProgress.id);
-
-        if (error) throw error;
+        // Increment times tried for existing progress
+        const response = await incrementTimesTried(existingProgress.id, sanitizedData.favorite_restaurant);
+        
+        if (response.error) {
+          throw new Error(response.error);
+        }
 
         // Update local state
         setUserProgress(prev => prev.map(p => 
-          p.id === existingProgress.id 
-            ? { ...p, times_tried: p.times_tried + 1, favorite_restaurant: restaurantName }
+          p.id === existingProgress.id && response.data
+            ? response.data
             : p
         ));
       } else {
         // Create new progress entry
-        const { data, error } = await supabase
-          .from('user_cuisine_progress')
-          .insert({
-            user_id: user.id,
-            cuisine_id: cuisineId,
-            first_tried_at: new Date().toISOString(),
-            times_tried: 1,
-            favorite_restaurant: restaurantName
-          })
-          .select(`
-            *,
-            cuisine:cuisines(*)
-          `)
-          .single();
-
-        if (error) throw error;
-
-        // Update local state
-        const newProgress = [...userProgress, data];
-        setUserProgress(newProgress);
-
-
-        // Check for new achievements
-        const oldTriedCount = userProgress.length;
-        const newTriedCount = newProgress.length;
-        const newAchievements = detectNewAchievements(oldTriedCount, newTriedCount);
+        const response = await createCuisineProgress(
+          user.id,
+          cuisineId,
+          sanitizedData.favorite_restaurant || restaurantName,
+          sanitizedData.notes,
+          sanitizedData.rating
+        );
         
-        if (newAchievements.length > 0) {
-          setAchievements(prev => [...prev, ...newAchievements]);
+        if (response.error) {
+          throw new Error(response.error);
         }
 
-        // Update stats
-        const newStats = calculateProgress(newProgress, cuisines);
-        setStats(newStats);
+        if (response.data) {
+          const newProgress = [...userProgress, response.data];
+          setUserProgress(newProgress);
+
+          // Update enhanced stats
+          const enhancedStats = {
+            totalCuisines: cuisines.length,
+            triedCuisines: newProgress.length,
+            percentage: cuisines.length > 0 ? Math.round((newProgress.length / cuisines.length) * 100) : 0,
+            diversityScore: calculateEnhancedDiversityScore(newProgress, cuisines),
+            currentStreak: getEnhancedCuisineStreak(newProgress),
+            monthlyProgress: getEnhancedMonthlyProgress(newProgress).thisMonth,
+            nextGoal: getNextGoal(newProgress.length)
+          };
+          setStats(enhancedStats);
+
+          // Check for newly unlocked achievements
+          setIsCheckingAchievements(true);
+          const newlyUnlocked = checkAchievements(newProgress, cuisines);
+          if (newlyUnlocked.length > 0) {
+            newlyUnlocked.forEach(achievement => {
+              unlockAchievement(achievement.id);
+            });
+            setCelebrationQueue(prev => [...prev, ...newlyUnlocked]);
+          }
+          setIsCheckingAchievements(false);
+        }
       }
     } catch (err) {
       console.error('Error marking cuisine as tried:', err);
@@ -186,19 +235,23 @@ export function useCuisineProgress() {
         throw new Error('Cuisine not tried yet');
       }
 
-      const { error } = await supabase
-        .from('user_cuisine_progress')
-        .update({ favorite_restaurant: restaurantName })
-        .eq('id', progressItem.id);
-
-      if (error) throw error;
+      // Sanitize input
+      const sanitizedData = sanitizeProgressInput({ favorite_restaurant: restaurantName });
+      
+      const response = await updateCuisineProgress(progressItem.id, {
+        favorite_restaurant: sanitizedData.favorite_restaurant
+      });
+      
+      if (response.error) {
+        throw new Error(response.error);
+      }
 
       // Update local state
-      setUserProgress(prev => prev.map(p => 
-        p.id === progressItem.id 
-          ? { ...p, favorite_restaurant: restaurantName }
-          : p
-      ));
+      if (response.data) {
+        setUserProgress(prev => prev.map(p => 
+          p.id === progressItem.id ? response.data! : p
+        ));
+      }
     } catch (err) {
       console.error('Error updating favorite restaurant:', err);
       throw err;
@@ -210,30 +263,68 @@ export function useCuisineProgress() {
   }, [userProgress]);
 
   const calculateUserStats = useCallback((): ProgressStats => {
-    return calculateProgress(userProgress, cuisines);
+    return {
+      totalCuisines: cuisines.length,
+      triedCuisines: userProgress.length,
+      percentage: cuisines.length > 0 ? Math.round((userProgress.length / cuisines.length) * 100) : 0,
+      diversityScore: calculateEnhancedDiversityScore(userProgress, cuisines),
+      currentStreak: getEnhancedCuisineStreak(userProgress),
+      monthlyProgress: getEnhancedMonthlyProgress(userProgress).thisMonth,
+      nextGoal: getNextGoal(userProgress.length)
+    };
   }, [userProgress, cuisines]);
 
   const checkForNewAchievements = useCallback((): Achievement[] => {
-    const currentProgress = userProgress.length;
-    const goals = getProgressGoals(currentProgress);
-    
-    return goals
-      .filter(goal => goal.achieved)
-      .map(goal => ({
-        id: `cuisine_${goal.threshold}`,
-        name: goal.name,
-        description: goal.description,
-        icon: goal.icon,
-        threshold: goal.threshold
-      }))
-      .filter(achievement => 
-        !achievements.some(existing => existing.id === achievement.id)
-      );
-  }, [userProgress, achievements]);
+    return checkAchievements(userProgress, cuisines);
+  }, [userProgress, cuisines, checkAchievements]);
 
   const refreshData = useCallback(() => {
     loadCuisineProgress();
   }, [loadCuisineProgress]);
+
+  // Enhanced helper functions
+  const getPredictedCuisines = useCallback((limit = 5) => {
+    return predictNextCuisines(userProgress, cuisines, limit);
+  }, [userProgress, cuisines]);
+
+  const getDiversityMetrics = useCallback(() => {
+    return {
+      score: calculateEnhancedDiversityScore(userProgress, cuisines),
+      streak: getEnhancedCuisineStreak(userProgress),
+      monthlyProgress: getEnhancedMonthlyProgress(userProgress)
+    };
+  }, [userProgress, cuisines]);
+
+  const getCuisineStats = useCallback(async () => {
+    const user = await getCurrentUser();
+    if (!user) return null;
+    
+    const response = await getCuisineStatistics(user.id);
+    return response.data;
+  }, []);
+
+  // Celebration management functions
+  const getNextCelebration = useCallback((): Achievement | null => {
+    return celebrationQueue.length > 0 ? celebrationQueue[0] : null;
+  }, [celebrationQueue]);
+
+  const dismissCelebration = useCallback(() => {
+    setCelebrationQueue(prev => prev.slice(1));
+  }, []);
+
+  const clearCelebrationQueue = useCallback(() => {
+    setCelebrationQueue([]);
+  }, []);
+
+  // Helper function for getting next goal
+  const getNextGoal = useCallback((currentCount: number) => {
+    const goals = [5, 10, 25, 50, 100];
+    const nextGoal = goals.find(goal => goal > currentCount) || goals[goals.length - 1];
+    return {
+      goal: nextGoal,
+      remaining: Math.max(0, nextGoal - currentCount)
+    };
+  }, []);
 
 
   // Initial load
@@ -249,6 +340,9 @@ export function useCuisineProgress() {
     achievements,
     loading,
     error,
+    isCheckingAchievements,
+    celebrationQueue,
+    recentlyUnlocked,
     loadCuisineProgress,
     markCuisineTried,
     getCuisineProgress,
@@ -256,5 +350,18 @@ export function useCuisineProgress() {
     checkForNewAchievements,
     updateFavoriteRestaurant,
     refreshData,
+    // Enhanced functions
+    getPredictedCuisines,
+    getDiversityMetrics,
+    getCuisineStats,
+    // Achievement functions
+    checkAchievements,
+    unlockAchievement,
+    getNextAchievements,
+    clearRecentlyUnlocked,
+    // Celebration functions
+    getNextCelebration,
+    dismissCelebration,
+    clearCelebrationQueue,
   };
 }

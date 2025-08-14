@@ -1,19 +1,36 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase, getCurrentUser } from '../lib/supabase';
-import { Achievement, UserCuisineProgress, AchievementProgress } from '../types/cuisine';
+import { 
+  Achievement, 
+  UserCuisineProgress, 
+  AchievementProgress,
+  Cuisine,
+  AchievementType
+} from '../types/cuisine';
+import {
+  getCuisinesByCategory,
+  getEnhancedCuisineStreak,
+  getEnhancedMonthlyProgress,
+} from '../lib/cuisineUtils';
 
-// Define all available achievements
+// Storage key for cached achievements
+const ACHIEVEMENTS_STORAGE_KEY = '@achievements/unlocked';
+
+// Enhanced achievement definitions with comprehensive criteria
 const ACHIEVEMENT_DEFINITIONS: Achievement[] = [
-  // Explorer Achievements
+  // Explorer Series - Try different cuisines
   {
     id: 'first_taste',
     name: 'First Taste',
-    description: 'Try your very first cuisine!',
+    description: 'Embarked on your culinary journey!',
     icon: '🎉',
     threshold: 1,
     tier: 'bronze',
-    category: 'exploration',
+    type: 'milestone' as AchievementType,
     rarity: 'common',
+    category: 'exploration',
+    points: 50,
     tips: ['Visit any restaurant and try a new cuisine', 'Start your culinary journey today!'],
   },
   {
@@ -23,8 +40,10 @@ const ACHIEVEMENT_DEFINITIONS: Achievement[] = [
     icon: '🧭',
     threshold: 5,
     tier: 'bronze',
+    type: 'cuisine_count' as AchievementType,
     category: 'exploration',
     rarity: 'common',
+    points: 100,
     tips: ['Try cuisines from different categories', 'Explore local restaurants in your area'],
   },
   {
@@ -34,8 +53,10 @@ const ACHIEVEMENT_DEFINITIONS: Achievement[] = [
     icon: '🗺️',
     threshold: 10,
     tier: 'silver',
+    type: 'cuisine_count' as AchievementType,
     category: 'exploration',
     rarity: 'common',
+    points: 250,
     tips: ['Visit food courts and try different vendors', 'Ask friends for restaurant recommendations'],
   },
   {
@@ -45,8 +66,10 @@ const ACHIEVEMENT_DEFINITIONS: Achievement[] = [
     icon: '🌟',
     threshold: 25,
     tier: 'gold',
+    type: 'cuisine_count' as AchievementType,
     category: 'exploration',
     rarity: 'rare',
+    points: 500,
     tips: ['Explore international districts in your city', 'Try fusion restaurants that combine multiple cuisines'],
   },
   {
@@ -56,8 +79,10 @@ const ACHIEVEMENT_DEFINITIONS: Achievement[] = [
     icon: '👑',
     threshold: 50,
     tier: 'gold',
+    type: 'cuisine_count' as AchievementType,
     category: 'exploration',
     rarity: 'epic',
+    points: 1000,
     tips: ['Travel to experience authentic regional cuisines', 'Attend food festivals and cultural events'],
   },
   {
@@ -67,8 +92,10 @@ const ACHIEVEMENT_DEFINITIONS: Achievement[] = [
     icon: '🌍',
     threshold: 100,
     tier: 'platinum',
+    type: 'cuisine_count' as AchievementType,
     category: 'exploration',
     rarity: 'legendary',
+    points: 2500,
     tips: ['Become a true citizen of the world', 'Document your incredible culinary journey'],
   },
 
@@ -80,8 +107,10 @@ const ACHIEVEMENT_DEFINITIONS: Achievement[] = [
     icon: '🌏',
     threshold: 5,
     tier: 'silver',
+    type: 'country_diversity' as AchievementType,
     category: 'diversity',
     rarity: 'rare',
+    points: 400,
     tips: ['Focus on Asian, European, African, American, and Oceanian cuisines', 'Explore ethnic restaurants in your area'],
   },
   {
@@ -91,8 +120,10 @@ const ACHIEVEMENT_DEFINITIONS: Achievement[] = [
     icon: '🎯',
     threshold: 3,
     tier: 'gold',
+    type: 'category_diversity' as AchievementType,
     category: 'diversity',
     rarity: 'epic',
+    points: 800,
     tips: ['Balance between Asian, European, American, and African cuisines', 'Try both familiar and exotic options'],
   },
 
@@ -104,8 +135,11 @@ const ACHIEVEMENT_DEFINITIONS: Achievement[] = [
     icon: '🥢',
     threshold: 10,
     tier: 'gold',
+    type: 'category_specialist' as AchievementType,
     category: 'specialist',
     rarity: 'rare',
+    points: 600,
+    metadata: { targetCategory: 'Asian' },
     tips: ['Explore Chinese, Japanese, Korean, Thai, Indian, Vietnamese cuisines', 'Visit authentic Asian neighborhoods'],
   },
   {
@@ -115,8 +149,11 @@ const ACHIEVEMENT_DEFINITIONS: Achievement[] = [
     icon: '🍝',
     threshold: 10,
     tier: 'gold',
+    type: 'category_specialist' as AchievementType,
     category: 'specialist',
     rarity: 'rare',
+    points: 600,
+    metadata: { targetCategory: 'European' },
     tips: ['Try Italian, French, Spanish, German, Greek cuisines', 'Explore Mediterranean and Nordic options'],
   },
 
@@ -124,23 +161,27 @@ const ACHIEVEMENT_DEFINITIONS: Achievement[] = [
   {
     id: 'streak_7',
     name: 'Weekly Explorer',
-    description: 'Try new cuisines 7 days in a row',
+    description: 'Try new cuisines 7 consecutive weeks',
     icon: '🔥',
     threshold: 7,
     tier: 'silver',
+    type: 'streak' as AchievementType,
     category: 'streak',
     rarity: 'rare',
+    points: 500,
     tips: ['Plan ahead with a list of restaurants to try', 'Mix simple and complex cuisines for sustainability'],
   },
   {
     id: 'streak_30',
     name: 'Monthly Maverick',
-    description: 'Try new cuisines 30 days in a row',
+    description: 'Maintain exploration streak for 30 weeks',
     icon: '⚡',
     threshold: 30,
     tier: 'platinum',
+    type: 'streak' as AchievementType,
     category: 'streak',
     rarity: 'legendary',
+    points: 1500,
     tips: ['This is an extreme challenge - plan carefully', 'Consider trying different dishes from the same cuisine'],
   },
 
@@ -152,8 +193,10 @@ const ACHIEVEMENT_DEFINITIONS: Achievement[] = [
     icon: '📱',
     threshold: 5,
     tier: 'bronze',
+    type: 'social_sharing' as AchievementType,
     category: 'social',
     rarity: 'common',
+    points: 150,
     tips: ['Share your cuisine discoveries with friends', 'Post photos and reviews of your favorite dishes'],
   },
   {
@@ -163,201 +206,328 @@ const ACHIEVEMENT_DEFINITIONS: Achievement[] = [
     icon: '🌟',
     threshold: 20,
     tier: 'gold',
+    type: 'social_sharing' as AchievementType,
     category: 'social',
     rarity: 'rare',
+    points: 400,
     tips: ['Build a following by sharing authentic food experiences', 'Help others discover new cuisines'],
+  },
+
+  // Speed Challenge
+  {
+    id: 'speed_10_30',
+    name: 'Speed Explorer',
+    description: 'Try 10 cuisines in 30 days',
+    icon: '⚡',
+    threshold: 10,
+    tier: 'gold',
+    type: 'speed_challenge' as AchievementType,
+    category: 'challenge',
+    rarity: 'epic',
+    points: 750,
+    tips: ['Plan your culinary sprint wisely', 'Balance variety with accessibility'],
   },
 ];
 
-export function useAchievements() {
+export interface UseAchievementsReturn {
+  achievements: Achievement[];
+  unlockedAchievements: Set<string>;
+  recentlyUnlocked: Achievement[];
+  loading: boolean;
+  error: string | null;
+  totalPoints: number;
+  // Functions
+  checkAchievements: (userProgress: UserCuisineProgress[], allCuisines?: Cuisine[]) => Achievement[];
+  unlockAchievement: (achievementId: string) => Promise<void>;
+  getNextAchievements: (userProgress: UserCuisineProgress[], allCuisines?: Cuisine[]) => Achievement[];
+  getAchievementProgress: (achievementId: string, userProgress?: UserCuisineProgress[], allCuisines?: Cuisine[]) => AchievementProgress;
+  celebrateAchievement: (achievement: Achievement) => void;
+  clearRecentlyUnlocked: () => void;
+  syncAchievements: () => Promise<void>;
+  getAchievementsByCategory: (category: string) => Achievement[];
+  getUserStats: () => { totalUnlocked: number; totalPoints: number; highestTier: string };
+  shareAchievement: (achievement: Achievement) => Promise<void>;
+  refreshAchievements: () => Promise<void>;
+}
+
+export function useAchievements(): UseAchievementsReturn {
   const [achievements, setAchievements] = useState<Achievement[]>([]);
-  const [unlockedAchievements, setUnlockedAchievements] = useState<string[]>([]);
+  const [unlockedAchievements, setUnlockedAchievements] = useState<Set<string>>(new Set());
+  const [recentlyUnlocked, setRecentlyUnlocked] = useState<Achievement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [totalPoints, setTotalPoints] = useState(0);
+  
+  const celebrationCallbacks = useRef<((achievement: Achievement) => void)[]>([]);
 
-  const loadUserAchievements = useCallback(async () => {
+  // Load unlocked achievements from storage on init
+  useEffect(() => {
+    loadUnlockedAchievements();
+  }, []);
+
+  // Calculate total points when unlocked achievements change
+  useEffect(() => {
+    const points = achievements
+      .filter(achievement => unlockedAchievements.has(achievement.id))
+      .reduce((sum, achievement) => sum + (achievement.points || 0), 0);
+    setTotalPoints(points);
+  }, [unlockedAchievements, achievements]);
+
+  const loadUnlockedAchievements = useCallback(async () => {
     try {
+      setLoading(true);
+      
+      // Try to load from Supabase first
       const user = await getCurrentUser();
-      if (!user) {
-        setUnlockedAchievements([]);
+      if (user) {
+        const { data: userAchievements, error: dbError } = await supabase
+          .from('user_achievements')
+          .select('achievement_id')
+          .eq('user_id', user.id);
+
+        if (dbError) {
+          console.warn('Error loading achievements from database:', dbError);
+          // Fallback to local storage
+          await loadFromLocalStorage();
+        } else {
+          const unlockedIds = new Set<string>(userAchievements?.map(ua => ua.achievement_id) || []);
+          setUnlockedAchievements(unlockedIds);
+          
+          // Also save to local storage as backup
+          await AsyncStorage.setItem(ACHIEVEMENTS_STORAGE_KEY, JSON.stringify(Array.from(unlockedIds)));
+        }
+      } else {
+        await loadFromLocalStorage();
+      }
+    } catch (err) {
+      console.error('Error loading achievements:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load achievements');
+      await loadFromLocalStorage();
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const loadFromLocalStorage = useCallback(async () => {
+    try {
+      const stored = await AsyncStorage.getItem(ACHIEVEMENTS_STORAGE_KEY);
+      if (stored) {
+        const unlockedIds = new Set(JSON.parse(stored));
+        setUnlockedAchievements(unlockedIds);
+      }
+    } catch (err) {
+      console.error('Error loading from local storage:', err);
+    }
+  }, []);
+
+  const checkAchievements = useCallback((
+    userProgress: UserCuisineProgress[], 
+    allCuisines: Cuisine[] = []
+  ): Achievement[] => {
+    const newlyUnlocked: Achievement[] = [];
+
+    achievements.forEach(achievement => {
+      if (unlockedAchievements.has(achievement.id)) {
+        return; // Already unlocked
+      }
+
+      const progress = getAchievementProgress(achievement.id, userProgress, allCuisines);
+      
+      if (progress.isUnlocked) {
+        newlyUnlocked.push(achievement);
+      }
+    });
+
+    return newlyUnlocked;
+  }, [achievements, unlockedAchievements]);
+
+  const unlockAchievement = useCallback(async (achievementId: string) => {
+    try {
+      if (unlockedAchievements.has(achievementId)) {
+        return; // Already unlocked
+      }
+
+      const achievement = achievements.find(a => a.id === achievementId);
+      if (!achievement) {
+        console.warn(`Achievement ${achievementId} not found`);
         return;
       }
 
-      const { data, error } = await supabase
+      // Update local state
+      setUnlockedAchievements(prev => new Set([...prev, achievementId]));
+      setRecentlyUnlocked(prev => [...prev, achievement]);
+
+      // Trigger celebration
+      celebrateAchievement(achievement);
+
+      // Save to database
+      const user = await getCurrentUser();
+      if (user) {
+        const { error: dbError } = await supabase
+          .from('user_achievements')
+          .insert({
+            user_id: user.id,
+            achievement_id: achievementId,
+            achievement_name: achievement.name,
+            achievement_description: achievement.description,
+            achievement_icon: achievement.icon,
+            threshold_value: achievement.threshold,
+            unlocked_at: new Date().toISOString(),
+          });
+
+        if (dbError) {
+          console.error('Error saving achievement to database:', dbError);
+        }
+      }
+
+      // Save to local storage as backup
+      const updatedUnlocked = new Set<string>([...Array.from(unlockedAchievements), achievementId]);
+      await AsyncStorage.setItem(ACHIEVEMENTS_STORAGE_KEY, JSON.stringify(Array.from(updatedUnlocked)));
+
+    } catch (err) {
+      console.error('Error unlocking achievement:', err);
+      setError(err instanceof Error ? err.message : 'Failed to unlock achievement');
+    }
+  }, [achievements, unlockedAchievements]);
+
+  const getNextAchievements = useCallback((
+    userProgress: UserCuisineProgress[], 
+    allCuisines: Cuisine[] = []
+  ): Achievement[] => {
+    return achievements
+      .filter(achievement => !unlockedAchievements.has(achievement.id))
+      .map(achievement => ({
+        ...achievement,
+        progress: getAchievementProgress(achievement.id, userProgress, allCuisines).progress,
+      }))
+      .sort((a, b) => (b.progress || 0) - (a.progress || 0))
+      .slice(0, 5); // Return top 5 closest achievements
+  }, [achievements, unlockedAchievements]);
+
+  const getAchievementProgress = useCallback((
+    achievementId: string, 
+    userProgress: UserCuisineProgress[] = [],
+    allCuisines: Cuisine[] = []
+  ): AchievementProgress => {
+    const achievement = achievements.find(a => a.id === achievementId);
+    if (!achievement) {
+      return { progress: 0, isUnlocked: false, current: 0, target: 0 };
+    }
+
+    const isUnlocked = unlockedAchievements.has(achievementId);
+    if (isUnlocked) {
+      return { progress: 1, isUnlocked: true, current: achievement.threshold, target: achievement.threshold };
+    }
+
+    let current = 0;
+    const target = achievement.threshold;
+
+    // Use enhanced logic based on achievement category
+    switch (achievement.category) {
+      case 'exploration':
+        current = userProgress.length;
+        break;
+
+      case 'diversity':
+        if (achievementId === 'continental_5') {
+          const countries = new Set(
+            userProgress
+              .map(p => p.cuisine?.origin_country)
+              .filter(Boolean)
+          );
+          current = countries.size;
+        }
+        break;
+
+      case 'specialist':
+        if (achievementId.includes('asian')) {
+          current = userProgress.filter(p => 
+            p.cuisine?.category?.toLowerCase()?.includes('asian') || false
+          ).length;
+        } else if (achievementId.includes('european')) {
+          current = userProgress.filter(p => 
+            p.cuisine?.category?.toLowerCase()?.includes('european') || false
+          ).length;
+        }
+        break;
+
+      case 'streak':
+        current = getEnhancedCuisineStreak(userProgress);
+        break;
+
+      case 'social':
+        // Count progress with photos as "shared"
+        current = userProgress.filter(p => p.photos && p.photos.length > 0).length;
+        break;
+
+      default:
+        current = userProgress.length;
+    }
+
+    const progress = target > 0 ? Math.min(current / target, 1) : 0;
+    const isComplete = current >= target;
+
+    return {
+      progress,
+      isUnlocked: isComplete,
+      current: Math.min(current, target),
+      target,
+    };
+  }, [achievements, unlockedAchievements]);
+
+  const celebrateAchievement = useCallback((achievement: Achievement) => {
+    celebrationCallbacks.current.forEach(callback => callback(achievement));
+  }, []);
+
+  const clearRecentlyUnlocked = useCallback(() => {
+    setRecentlyUnlocked([]);
+  }, []);
+
+  const syncAchievements = useCallback(async () => {
+    try {
+      const user = await getCurrentUser();
+      if (!user) return;
+
+      // Fetch latest from database
+      const { data: dbAchievements, error } = await supabase
         .from('user_achievements')
         .select('achievement_id')
         .eq('user_id', user.id);
 
-      if (error) throw error;
-      
-      const unlockedIds = data?.map(item => item.achievement_id) || [];
-      setUnlockedAchievements(unlockedIds);
+      if (error) {
+        console.error('Error syncing achievements:', error);
+        return;
+      }
+
+      const dbUnlockedIds = new Set<string>(dbAchievements?.map(ua => ua.achievement_id) || []);
+      setUnlockedAchievements(dbUnlockedIds);
+
+      // Update local storage
+      await AsyncStorage.setItem(ACHIEVEMENTS_STORAGE_KEY, JSON.stringify(Array.from(dbUnlockedIds)));
     } catch (err) {
-      console.error('Error loading user achievements:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load achievements');
+      console.error('Error syncing achievements:', err);
     }
   }, []);
 
-  const checkAchievements = useCallback((userProgress: UserCuisineProgress[]): Achievement[] => {
-    const newAchievements: Achievement[] = [];
-    const progressCount = userProgress.length;
-    
-    // Get cuisine data for more complex checks
-    const cuisines = userProgress.map(p => p.cuisine).filter(Boolean);
-    const categories = new Set(cuisines.map(c => c!.category));
-    const countries = new Set(cuisines.map(c => c!.origin_country).filter(Boolean));
+  const getAchievementsByCategory = useCallback((category: string): Achievement[] => {
+    return achievements.filter(achievement => achievement.category === category);
+  }, [achievements]);
 
-    ACHIEVEMENT_DEFINITIONS.forEach(achievement => {
-      if (unlockedAchievements.includes(achievement.id)) {
-        return; // Already unlocked
-      }
-
-      let shouldUnlock = false;
-
-      switch (achievement.id) {
-        case 'first_taste':
-        case 'explorer_5':
-        case 'explorer_10':
-        case 'explorer_25':
-        case 'explorer_50':
-        case 'explorer_100':
-          shouldUnlock = progressCount >= achievement.threshold;
-          break;
-
-        case 'continental_5':
-          shouldUnlock = countries.size >= achievement.threshold;
-          break;
-
-        case 'category_master':
-          const categoryCounts: Record<string, number> = {};
-          cuisines.forEach(cuisine => {
-            if (cuisine?.category) {
-              categoryCounts[cuisine.category] = (categoryCounts[cuisine.category] || 0) + 1;
-            }
-          });
-          const qualifyingCategories = Object.values(categoryCounts).filter(count => count >= 3).length;
-          shouldUnlock = qualifyingCategories >= 4; // At least 4 categories with 3+ cuisines each
-          break;
-
-        case 'asian_specialist':
-          const asianCuisines = cuisines.filter(c => 
-            c?.category?.toLowerCase().includes('asian') || 
-            ['chinese', 'japanese', 'korean', 'thai', 'indian', 'vietnamese', 'filipino'].some(asian => 
-              c?.name.toLowerCase().includes(asian)
-            )
-          );
-          shouldUnlock = asianCuisines.length >= achievement.threshold;
-          break;
-
-        case 'european_specialist':
-          const europeanCuisines = cuisines.filter(c => 
-            c?.category?.toLowerCase().includes('european') || 
-            ['italian', 'french', 'spanish', 'german', 'greek', 'british'].some(european => 
-              c?.name.toLowerCase().includes(european)
-            )
-          );
-          shouldUnlock = europeanCuisines.length >= achievement.threshold;
-          break;
-
-        case 'streak_7':
-        case 'streak_30':
-          // Calculate streak based on consecutive days
-          const streak = calculateStreak(userProgress);
-          shouldUnlock = streak >= achievement.threshold;
-          break;
-
-        default:
-          // For social achievements and others, we'll implement when we have the data
-          break;
-      }
-
-      if (shouldUnlock) {
-        newAchievements.push({
-          ...achievement,
-          unlockedAt: new Date().toISOString(),
-        });
-      }
-    });
-
-    return newAchievements;
-  }, [unlockedAchievements]);
-
-  const unlockAchievement = useCallback(async (achievementId: string): Promise<void> => {
-    try {
-      const user = await getCurrentUser();
-      if (!user) throw new Error('User not authenticated');
-
-      const { error } = await supabase
-        .from('user_achievements')
-        .insert({
-          user_id: user.id,
-          achievement_id: achievementId,
-          unlocked_at: new Date().toISOString(),
-        });
-
-      if (error) throw error;
-
-      setUnlockedAchievements(prev => [...prev, achievementId]);
-    } catch (err) {
-      console.error('Error unlocking achievement:', err);
-      throw err;
-    }
-  }, []);
-
-  const getNextAchievements = useCallback((): Achievement[] => {
-    return ACHIEVEMENT_DEFINITIONS
-      .filter(achievement => !unlockedAchievements.includes(achievement.id))
-      .sort((a, b) => a.threshold - b.threshold)
-      .slice(0, 3);
-  }, [unlockedAchievements]);
-
-  const getAchievementProgress = useCallback((
-    achievementId: string, 
-    userProgress: UserCuisineProgress[]
-  ): AchievementProgress => {
-    const achievement = ACHIEVEMENT_DEFINITIONS.find(a => a.id === achievementId);
-    if (!achievement) {
-      return { achievementId, progress: 0, total: 0, isUnlocked: false };
-    }
-
-    const isUnlocked = unlockedAchievements.includes(achievementId);
-    let progress = 0;
-
-    switch (achievementId) {
-      case 'first_taste':
-      case 'explorer_5':
-      case 'explorer_10':
-      case 'explorer_25':
-      case 'explorer_50':
-      case 'explorer_100':
-        progress = userProgress.length;
-        break;
-
-      case 'continental_5':
-        const countries = new Set(
-          userProgress
-            .map(p => p.cuisine?.origin_country)
-            .filter(Boolean)
-        );
-        progress = countries.size;
-        break;
-
-      case 'streak_7':
-      case 'streak_30':
-        progress = calculateStreak(userProgress);
-        break;
-
-      default:
-        progress = 0;
-    }
+  const getUserStats = useCallback(() => {
+    const unlockedList = achievements.filter(a => unlockedAchievements.has(a.id));
+    const totalUnlocked = unlockedList.length;
+    const highestTierMap = { bronze: 1, silver: 2, gold: 3, platinum: 4 };
+    const highestTierValue = Math.max(...unlockedList.map(a => highestTierMap[a.tier || 'bronze'] || 1));
+    const highestTier = Object.keys(highestTierMap).find(key => 
+      highestTierMap[key as keyof typeof highestTierMap] === highestTierValue
+    ) || 'bronze';
 
     return {
-      achievementId,
-      progress: Math.min(progress, achievement.threshold),
-      total: achievement.threshold,
-      isUnlocked,
+      totalUnlocked,
+      totalPoints,
+      highestTier,
     };
-  }, [unlockedAchievements]);
+  }, [achievements, unlockedAchievements, totalPoints]);
 
   const shareAchievement = useCallback(async (achievement: Achievement): Promise<void> => {
     try {
@@ -373,42 +543,29 @@ export function useAchievements() {
     }
   }, []);
 
-  // Calculate achievements based on current progress
-  const achievementsWithProgress = useMemo(() => {
-    return ACHIEVEMENT_DEFINITIONS.map(achievement => ({
-      ...achievement,
-      unlockedAt: unlockedAchievements.includes(achievement.id) ? 
-        new Date().toISOString() : undefined,
-    }));
-  }, [unlockedAchievements]);
-
+  // Initialize achievements
   useEffect(() => {
-    const initializeAchievements = async () => {
-      setLoading(true);
-      try {
-        await loadUserAchievements();
-        setAchievements(ACHIEVEMENT_DEFINITIONS);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to initialize achievements');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    initializeAchievements();
-  }, [loadUserAchievements]);
+    setAchievements(ACHIEVEMENT_DEFINITIONS);
+  }, []);
 
   return {
-    achievements: achievementsWithProgress,
+    achievements,
     unlockedAchievements,
+    recentlyUnlocked,
     loading,
     error,
+    totalPoints,
     checkAchievements,
     unlockAchievement,
     getNextAchievements,
     getAchievementProgress,
+    celebrateAchievement,
+    clearRecentlyUnlocked,
+    syncAchievements,
+    getAchievementsByCategory,
+    getUserStats,
     shareAchievement,
-    refreshAchievements: loadUserAchievements,
+    refreshAchievements: loadUnlockedAchievements,
   };
 }
 

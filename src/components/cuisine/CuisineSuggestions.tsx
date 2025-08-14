@@ -12,28 +12,30 @@ import { colors, spacing, radii, fonts, shadows } from '../../theme/uiTheme';
 
 interface CuisineSuggestionsProps {
   userProgress: UserCuisineProgress[];
-  location?: { latitude: number; longitude: number };
   onSuggestionPress: (cuisine: Cuisine) => void;
   maxSuggestions?: number;
+  showReasons?: boolean;
+  includeAchievementChallenges?: boolean;
+  allCuisines?: Cuisine[];
 }
 
 // Mock data - in a real app, this would come from your cuisine database
 const ALL_CUISINES: Cuisine[] = [
-  { id: 1, name: 'Thai', category: 'Asian', emoji: '🇹🇭', origin_country: 'Thailand' },
-  { id: 2, name: 'Vietnamese', category: 'Asian', emoji: '🇻🇳', origin_country: 'Vietnam' },
-  { id: 3, name: 'Korean', category: 'Asian', emoji: '🇰🇷', origin_country: 'South Korea' },
-  { id: 4, name: 'Ethiopian', category: 'African', emoji: '🇪🇹', origin_country: 'Ethiopia' },
-  { id: 5, name: 'Moroccan', category: 'African', emoji: '🇲🇦', origin_country: 'Morocco' },
-  { id: 6, name: 'Peruvian', category: 'South American', emoji: '🇵🇪', origin_country: 'Peru' },
-  { id: 7, name: 'Turkish', category: 'Mediterranean', emoji: '🇹🇷', origin_country: 'Turkey' },
-  { id: 8, name: 'Lebanese', category: 'Mediterranean', emoji: '🇱🇧', origin_country: 'Lebanon' },
-  { id: 9, name: 'Japanese', category: 'Asian', emoji: '🇯🇵', origin_country: 'Japan' },
-  { id: 10, name: 'Italian', category: 'European', emoji: '🇮🇹', origin_country: 'Italy' },
-  { id: 11, name: 'Mexican', category: 'Latin American', emoji: '🇲🇽', origin_country: 'Mexico' },
-  { id: 12, name: 'Indian', category: 'Asian', emoji: '🇮🇳', origin_country: 'India' },
-  { id: 13, name: 'Greek', category: 'Mediterranean', emoji: '🇬🇷', origin_country: 'Greece' },
-  { id: 14, name: 'French', category: 'European', emoji: '🇫🇷', origin_country: 'France' },
-  { id: 15, name: 'Chinese', category: 'Asian', emoji: '🇨🇳', origin_country: 'China' },
+  { id: 1, name: 'Thai', category: 'Asian', emoji: '🇹🇭', origin_country: 'Thailand', created_at: new Date().toISOString() },
+  { id: 2, name: 'Vietnamese', category: 'Asian', emoji: '🇻🇳', origin_country: 'Vietnam', created_at: new Date().toISOString() },
+  { id: 3, name: 'Korean', category: 'Asian', emoji: '🇰🇷', origin_country: 'South Korea', created_at: new Date().toISOString() },
+  { id: 4, name: 'Ethiopian', category: 'African', emoji: '🇪🇹', origin_country: 'Ethiopia', created_at: new Date().toISOString() },
+  { id: 5, name: 'Moroccan', category: 'African', emoji: '🇲🇦', origin_country: 'Morocco', created_at: new Date().toISOString() },
+  { id: 6, name: 'Peruvian', category: 'South American', emoji: '🇵🇪', origin_country: 'Peru', created_at: new Date().toISOString() },
+  { id: 7, name: 'Turkish', category: 'Mediterranean', emoji: '🇹🇷', origin_country: 'Turkey', created_at: new Date().toISOString() },
+  { id: 8, name: 'Lebanese', category: 'Mediterranean', emoji: '🇱🇧', origin_country: 'Lebanon', created_at: new Date().toISOString() },
+  { id: 9, name: 'Japanese', category: 'Asian', emoji: '🇯🇵', origin_country: 'Japan', created_at: new Date().toISOString() },
+  { id: 10, name: 'Italian', category: 'European', emoji: '🇮🇹', origin_country: 'Italy', created_at: new Date().toISOString() },
+  { id: 11, name: 'Mexican', category: 'Latin American', emoji: '🇲🇽', origin_country: 'Mexico', created_at: new Date().toISOString() },
+  { id: 12, name: 'Indian', category: 'Asian', emoji: '🇮🇳', origin_country: 'India', created_at: new Date().toISOString() },
+  { id: 13, name: 'Greek', category: 'Mediterranean', emoji: '🇬🇷', origin_country: 'Greece', created_at: new Date().toISOString() },
+  { id: 14, name: 'French', category: 'European', emoji: '🇫🇷', origin_country: 'France', created_at: new Date().toISOString() },
+  { id: 15, name: 'Chinese', category: 'Asian', emoji: '🇨🇳', origin_country: 'China', created_at: new Date().toISOString() },
 ];
 
 const SEASONAL_CUISINES = {
@@ -45,15 +47,130 @@ const SEASONAL_CUISINES = {
 
 const TRENDING_CUISINES = [1, 3, 6, 7]; // Thai, Korean, Peruvian, Turkish
 
+/**
+ * Generate achievement-based cuisine challenges
+ */
+function generateAchievementChallenges(
+  userProgress: UserCuisineProgress[],
+  untriedCuisines: Cuisine[],
+  userCategories: Set<string>
+): CuisineSuggestion[] {
+  const suggestions: CuisineSuggestion[] = [];
+  const triedCount = userProgress.length;
+
+  // Close to milestone achievements
+  const milestones = [5, 10, 25, 50, 100];
+  const nextMilestone = milestones.find(m => m > triedCount);
+  
+  if (nextMilestone && nextMilestone - triedCount <= 3) {
+    const remaining = nextMilestone - triedCount;
+    const milestoneSuggestions = untriedCuisines
+      .slice(0, Math.min(remaining, 2))
+      .map(cuisine => ({
+        cuisine,
+        reason: 'achievement' as const,
+        confidence: 0.9,
+        description: `Only ${remaining} more to reach ${nextMilestone} cuisines achievement!`,
+      }));
+    suggestions.push(...milestoneSuggestions);
+  }
+
+  // Category specialist opportunities
+  const categoryCounts: Record<string, number> = {};
+  userProgress.forEach(p => {
+    if (p.cuisine?.category) {
+      categoryCounts[p.cuisine.category] = (categoryCounts[p.cuisine.category] || 0) + 1;
+    }
+  });
+
+  Object.entries(categoryCounts).forEach(([category, count]) => {
+    if (count >= 3 && count < 5) { // Close to specialist achievement
+      const categorySpecialistSuggestions = untriedCuisines
+        .filter(c => c.category === category)
+        .slice(0, 1)
+        .map(cuisine => ({
+          cuisine,
+          reason: 'achievement' as const,
+          confidence: 0.8,
+          description: `${5 - count} more ${category} cuisines for specialist achievement!`,
+        }));
+      suggestions.push(...categorySpecialistSuggestions);
+    }
+  });
+
+  // Country diversity achievements
+  const countries = new Set(
+    userProgress
+      .map(p => p.cuisine?.origin_country)
+      .filter(Boolean)
+  );
+  
+  if (countries.size >= 3 && countries.size < 5) {
+    const newCountrySuggestions = untriedCuisines
+      .filter(c => c.origin_country && !countries.has(c.origin_country))
+      .slice(0, 1)
+      .map(cuisine => ({
+        cuisine,
+        reason: 'achievement' as const,
+        confidence: 0.8,
+        description: `Try cuisines from ${5 - countries.size} more countries for diversity achievement!`,
+      }));
+    suggestions.push(...newCountrySuggestions);
+  }
+
+  return suggestions;
+}
+
+/**
+ * Generate diversity score booster suggestions
+ */
+function generateDiversityBoosters(
+  userProgress: UserCuisineProgress[],
+  untriedCuisines: Cuisine[]
+): CuisineSuggestion[] {
+  const suggestions: CuisineSuggestion[] = [];
+  
+  // Find underrepresented categories
+  const categoryCounts: Record<string, number> = {};
+  const allCategories = new Set(untriedCuisines.map(c => c.category));
+  
+  userProgress.forEach(p => {
+    if (p.cuisine?.category) {
+      categoryCounts[p.cuisine.category] = (categoryCounts[p.cuisine.category] || 0) + 1;
+    }
+  });
+
+  // Suggest from categories with 0 or 1 tries
+  const underrepresentedCategories = Array.from(allCategories).filter(category => 
+    (categoryCounts[category] || 0) <= 1
+  );
+
+  const diversityBoosters = untriedCuisines
+    .filter(cuisine => underrepresentedCategories.includes(cuisine.category))
+    .slice(0, 2)
+    .map(cuisine => ({
+      cuisine,
+      reason: 'diversity' as const,
+      confidence: 0.7,
+      description: `Boost your diversity score with ${cuisine.category} cuisine!`,
+    }));
+
+  suggestions.push(...diversityBoosters);
+  
+  return suggestions;
+}
+
 export default function CuisineSuggestions({
   userProgress,
-  location,
   onSuggestionPress,
   maxSuggestions = 8,
+  showReasons = true,
+  includeAchievementChallenges = true,
+  allCuisines = ALL_CUISINES,
 }: CuisineSuggestionsProps) {
   const suggestions = useMemo(() => {
     const triedCuisineIds = new Set(userProgress.map(p => p.cuisine_id));
-    const untriedCuisines = ALL_CUISINES.filter(c => !triedCuisineIds.has(c.id));
+    const untriedCuisines = allCuisines.filter(c => !triedCuisineIds.has(c.id));
     
     if (untriedCuisines.length === 0) {
       return [];
@@ -129,6 +246,36 @@ export default function CuisineSuggestions({
 
     suggestionList.push(...challengeSuggestions);
 
+    // 5. Achievement-based challenges
+    if (includeAchievementChallenges) {
+      const achievementChallenges = generateAchievementChallenges(
+        userProgress, 
+        untriedCuisines, 
+        userCategories
+      );
+      suggestionList.push(...achievementChallenges);
+    }
+
+    // 6. Diversity boosters (help achieve better diversity score)
+    const diversityBoosters = generateDiversityBoosters(
+      userProgress,
+      untriedCuisines
+    );
+    suggestionList.push(...diversityBoosters);
+
+    // 7. Quick wins (easy-to-find cuisines)
+    const quickWinSuggestions = untriedCuisines
+      .filter(cuisine => ['Chinese', 'Italian', 'Mexican', 'Indian'].includes(cuisine.name))
+      .slice(0, 1)
+      .map(cuisine => ({
+        cuisine,
+        reason: 'quick_win' as const,
+        confidence: 0.8,
+        description: 'Easy to find and perfect for trying something new!',
+      }));
+
+    suggestionList.push(...quickWinSuggestions);
+
     // Remove duplicates and limit results
     const uniqueSuggestions = suggestionList.filter((suggestion, index, self) => 
       index === self.findIndex(s => s.cuisine.id === suggestion.cuisine.id)
@@ -137,7 +284,7 @@ export default function CuisineSuggestions({
     return uniqueSuggestions
       .sort((a, b) => b.confidence - a.confidence)
       .slice(0, maxSuggestions);
-  }, [userProgress, maxSuggestions]);
+  }, [userProgress, maxSuggestions, includeAchievementChallenges, allCuisines]);
 
   const groupedSuggestions = useMemo(() => {
     const groups: Record<string, CuisineSuggestion[]> = {
@@ -145,6 +292,9 @@ export default function CuisineSuggestions({
       trending: [],
       seasonal: [],
       challenge: [],
+      achievement: [],
+      diversity: [],
+      quick_win: [],
       friends: [],
     };
 
@@ -161,6 +311,9 @@ export default function CuisineSuggestions({
       case 'trending': return 'Trending Now';
       case 'seasonal': return 'Perfect for This Season';
       case 'challenge': return 'Challenge Yourself';
+      case 'achievement': return 'Achievement Opportunities';
+      case 'diversity': return 'Boost Your Diversity Score';
+      case 'quick_win': return 'Easy to Find';
       case 'friends': return 'Friends Are Loving';
       default: return 'Suggestions';
     }
@@ -172,6 +325,9 @@ export default function CuisineSuggestions({
       case 'trending': return 'trending-up';
       case 'seasonal': return 'leaf';
       case 'challenge': return 'flash';
+      case 'achievement': return 'trophy';
+      case 'diversity': return 'color-palette';
+      case 'quick_win': return 'checkmark-circle';
       case 'friends': return 'people';
       default: return 'restaurant';
     }
@@ -253,9 +409,11 @@ export default function CuisineSuggestions({
                   <Text style={styles.cuisineCategory} numberOfLines={1}>
                     {suggestion.cuisine.category}
                   </Text>
-                  <Text style={styles.suggestionDescription} numberOfLines={2}>
-                    {suggestion.description}
-                  </Text>
+                  {showReasons && (
+                    <Text style={styles.suggestionDescription} numberOfLines={2}>
+                      {suggestion.description}
+                    </Text>
+                  )}
                 </View>
 
                 <View style={styles.cardFooter}>
@@ -278,7 +436,7 @@ export default function CuisineSuggestions({
 
       <View style={styles.footer}>
         <Text style={styles.footerText}>
-          💡 Suggestions are updated based on your progress and preferences
+          💡 Suggestions are personalized based on your progress, achievements, and taste preferences
         </Text>
       </View>
     </ScrollView>
